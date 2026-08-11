@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+.next
+.out
+.vercel
+
+# Test coverage
+coverage
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Turborepo
+.turbo
+
+# Prisma
+*/prisma/migrations/*.sql
+!*/prisma/migrations/migration_lock.toml
+
+# Docker
+docker/data
+
+# Misc
+temp
+tmp
+project.md
+todo.md
+.kilo/kilo.jsonc

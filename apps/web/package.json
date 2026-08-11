@@ -1,0 +1,46 @@
+{
+  "name": "@danta/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:unit": "vitest run --typecheck.ignore true"
+  },
+  "dependencies": {
+    "@danta/auth": "workspace:*",
+    "@danta/config": "workspace:*",
+    "@danta/permissions": "workspace:*",
+    "@danta/schemas": "workspace:*",
+    "@danta/ui": "workspace:*",
+    "@tanstack/react-form": "^1.0.0",
+    "@tanstack/react-query": "^5.70.0",
+    "@tanstack/react-router": "^1.114.0",
+    "@tanstack/react-table": "^8.21.0",
+    "lucide-react": "^0.507.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "postcss": "^8.5.0",
+    "prettier": "^3.5.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0"
+  }
+}
