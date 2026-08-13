@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ImagingIntegrationsService } from './imaging-integrations.service';
 import type { CreateImagingIntegration, UpdateImagingIntegration } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class ImagingIntegrationsController {
 
   @Get()
   @RequirePermissions('settings:manage')
-  async findAll(@Req() req: Request) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.imagingIntegrationsService.findAll(user.tenantId);
   }
 
   @Get(':id')
   @RequirePermissions('settings:manage')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.imagingIntegrationsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('settings:manage')
-  async create(@Req() req: Request, @Body() body: CreateImagingIntegration) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateImagingIntegration) {
     return this.imagingIntegrationsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('settings:manage')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateImagingIntegration) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateImagingIntegration) {
     return this.imagingIntegrationsService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('settings:manage')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.imagingIntegrationsService.remove(user.tenantId, user.id, id);
   }
 }

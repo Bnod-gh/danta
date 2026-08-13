@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AppointmentTypesService } from './appointment-types.service';
 import type { CreateAppointmentType, UpdateAppointmentType } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class AppointmentTypesController {
 
   @Get()
   @RequirePermissions('calendar:read')
-  async findAll(@Req() req: Request) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.appointmentTypesService.findAll(user.tenantId);
   }
 
   @Get(':id')
   @RequirePermissions('calendar:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentTypesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('calendar:create')
-  async create(@Req() req: Request, @Body() body: CreateAppointmentType) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAppointmentType) {
     return this.appointmentTypesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('calendar:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateAppointmentType) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateAppointmentType) {
     return this.appointmentTypesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('calendar:delete')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentTypesService.remove(user.tenantId, user.id, id);
   }
 }

@@ -1,5 +1,5 @@
-import { Controller, Get, Put, Body, Param, UseGuards, Req, BadRequestException } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Put, Body, Param, UseGuards, BadRequestException } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { SettingsService } from './settings.service';
 import type { Setting } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,18 +13,16 @@ export class SettingsController {
 
   @Get()
   @RequirePermissions('settings:manage')
-  async findAll(@Req() req: Request) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.settingsService.findAll(user.tenantId);
   }
 
   @Put(':key')
   @RequirePermissions('settings:manage')
-  async upsert(@Req() req: Request, @Param('key') key: string, @Body() body: Setting) {
-    const user = req.user as any;
+  async upsert(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string, @Body() body: Setting) {
     if (body.key !== key) {
       throw new BadRequestException('Key mismatch');
     }
-    return this.settingsService.upsert(user.tenantId, key, body.value);
+    return this.settingsService.upsert(user.tenantId, key, body.value, user.id);
   }
 }

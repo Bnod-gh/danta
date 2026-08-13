@@ -1,5 +1,5 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Post, Body, Get, Param, Delete, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ApiKeysService } from './api-keys.service';
 import type { ApiKeyCreate } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,22 +13,26 @@ export class ApiKeysController {
 
   @Post()
   @RequirePermissions('settings:manage')
-  async create(@Req() req: Request, @Body() body: ApiKeyCreate) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: ApiKeyCreate) {
     return this.apiKeysService.create(user.tenantId, user.id, body);
   }
 
   @Get()
   @RequirePermissions('settings:manage')
-  async findAll(@Req() req: Request) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.apiKeysService.findAll(user.tenantId);
   }
 
-  @Post(':id/revoke')
+  @Post(':id/rotate')
   @RequirePermissions('settings:manage')
-  async revoke(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
-    return this.apiKeysService.revoke(user.tenantId, id, user.id);
+  async rotate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.apiKeysService.rotate(user.tenantId, id, user.id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('settings:manage')
+  async revoke(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body('reason') reason?: string) {
+    return this.apiKeysService.revoke(user.tenantId, id, user.id, reason);
   }
 }

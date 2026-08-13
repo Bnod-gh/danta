@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { StorageProvider, STORAGE_PROVIDERS } from './storage.interface';
+import { StorageProvider } from './storage.interface';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -26,12 +26,4 @@ export class LocalStorageProvider implements StorageProvider {
   getUrl(key: string): string {
     return `/storage/${key}`;
   }
-}
-
-export const STORAGE_PROVIDER_MAP: Record<string, StorageProvider> = {
-  [STORAGE_PROVIDERS.local]: new LocalStorageProvider(),
-};
-
-export function getStorageProvider(provider: string): StorageProvider {
-  return STORAGE_PROVIDER_MAP[provider] || STORAGE_PROVIDER_MAP[STORAGE_PROVIDERS.local];
 }

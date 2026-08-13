@@ -32,6 +32,10 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
+    if (user.type === 'api-key') {
+      return true;
+    }
+
     const userPermissions = await this.prisma.permission.findMany({
       where: {
         roles: {

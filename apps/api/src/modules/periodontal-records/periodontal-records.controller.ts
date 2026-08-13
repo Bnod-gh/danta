@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PeriodontalRecordsService } from './periodontal-records.service';
 import type { CreatePeriodontalRecord, UpdatePeriodontalRecord } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class PeriodontalRecordsController {
 
   @Get()
   @RequirePermissions('clinical:read')
-  async findAll(@Req() req: Request, @Query('patientId') patientId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string) {
     return this.periodontalRecordsService.findAll(user.tenantId, patientId);
   }
 
   @Get(':id')
   @RequirePermissions('clinical:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.periodontalRecordsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('clinical:create')
-  async create(@Req() req: Request, @Body() body: CreatePeriodontalRecord) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreatePeriodontalRecord) {
     return this.periodontalRecordsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('clinical:amend')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdatePeriodontalRecord) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdatePeriodontalRecord) {
     return this.periodontalRecordsService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('clinical:amend')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.periodontalRecordsService.remove(user.tenantId, user.id, id);
   }
 }

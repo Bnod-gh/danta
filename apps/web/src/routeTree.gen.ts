@@ -62,6 +62,7 @@ import { Route as ReportsPractitionersIndexRouteImport } from './routes/reports/
 import { Route as ReportsProductionIndexRouteImport } from './routes/reports/production/index'
 import { Route as ReportsRecallsIndexRouteImport } from './routes/reports/recalls/index'
 import { Route as ReportsRevenueIndexRouteImport } from './routes/reports/revenue/index'
+import { Route as ApiKeysIndexRouteImport } from './routes/api-keys/index'
 
 const AppointmentRemindersIndexRoute =
   AppointmentRemindersIndexRouteImport.update({
@@ -82,6 +83,11 @@ const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
 const AvailabilityIndexRoute = AvailabilityIndexRouteImport.update({
   id: '/availability/',
   path: '/availability/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKeysIndexRoute = ApiKeysIndexRouteImport.update({
+  id: '/api-keys/',
+  path: '/api-keys/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChairsIndexRoute = ChairsIndexRouteImport.update({
@@ -513,6 +519,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/patients/$id'
+    | '/api-keys/'
     | '/appointment-reminders/'
     | '/appointment-types/'
     | '/appointments/'
@@ -681,6 +688,7 @@ export interface RootRouteChildren {
   PatientsIdRoute: typeof PatientsIdRoute
   AppointmentRemindersIndexRoute: typeof AppointmentRemindersIndexRoute
   AppointmentTypesIndexRoute: typeof AppointmentTypesIndexRoute
+  ApiKeysIndexRoute: typeof ApiKeysIndexRoute
   AppointmentsIndexRoute: typeof AppointmentsIndexRoute
   AvailabilityIndexRoute: typeof AvailabilityIndexRoute
   ChairsIndexRoute: typeof ChairsIndexRoute
@@ -747,6 +755,13 @@ declare module '@tanstack/react-router' {
       path: '/appointment-types'
       fullPath: '/appointment-types/'
       preLoaderRoute: typeof AppointmentTypesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-keys/': {
+      id: '/api-keys/'
+      path: '/api-keys'
+      fullPath: '/api-keys/'
+      preLoaderRoute: typeof ApiKeysIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appointments/': {
@@ -1115,6 +1130,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppointmentTypesIndexRoute: AppointmentTypesIndexRoute,
   AppointmentsIndexRoute: AppointmentsIndexRoute,
   AvailabilityIndexRoute: AvailabilityIndexRoute,
+  ApiKeysIndexRoute: ApiKeysIndexRoute,
   ChairsIndexRoute: ChairsIndexRoute,
   ClaimIntegrationsIndexRoute: ClaimIntegrationsIndexRoute,
   ClinicalNotesIndexRoute: ClinicalNotesIndexRoute,

@@ -105,6 +105,8 @@ import { ProductionPage } from './routes/reports/production';
 import { PractitionersPage } from './routes/reports/practitioners';
 // @ts-expect-error TanStack Router v1 type inference requires routeTree generation
 import { ReportsPatientsPage } from './routes/reports/patients';
+// @ts-expect-error TanStack Router v1 type inference requires routeTree generation
+import { ApiKeysPage } from './routes/api-keys';
 
 export const dashboardRoute = new Route({
   getParentRoute: () => rootRoute,
@@ -158,6 +160,12 @@ export const availabilityRoute = new Route({
   getParentRoute: () => rootRoute,
   path: '/availability',
   component: AvailabilityPage,
+});
+
+export const apiKeysRoute = new Route({
+  getParentRoute: () => rootRoute,
+  path: '/api-keys',
+  component: ApiKeysPage,
 });
 
 export const appointmentsRoute = new Route({
@@ -436,4 +444,4 @@ export const indexRoute = new Route({
   component: () => <div>Redirecting...</div>,
 });
 
-export const routeTree = rootRoute.addChildren([dashboardRoute, loginRoute, registerRoute, patientsRoute, patientDetailRoute, appointmentTypesRoute, providersRoute, chairsRoute, availabilityRoute, appointmentsRoute, clinicalNotesRoute, templatesRoute, dentalChartsRoute, toothConditionsRoute, treatmentHistoryRoute, treatmentPlansRoute, periodontalRecordsRoute, imagingStudiesRoute, imagingImagesRoute, imagingIntegrationsRoute, invoicesRoute, claimIntegrationsRoute, statementsRoute, communicationPreferencesRoute, communicationTemplatesRoute, appointmentRemindersRoute, servicesRoute, feesRoute, messagesRoute, paymentsRoute, receiptsRoute, notificationsRoute, recallsRoute, refundsRoute, patientPortalRoute, patientPortalAppointmentsRoute, patientPortalTreatmentPlansRoute, patientPortalBillingRoute, patientPortalFormsRoute, patientPortalDashboardRoute, patientPortalLoginRoute, patientPortalPaymentsRoute, patientPortalDocumentsRoute, patientPortalNotificationsRoute, patientPortalMessagesRoute, reportsRoute, reportsRevenueRoute, reportsCollectionsRoute, reportsAppointmentsRoute, reportsDashboardRoute, reportsRecallsRoute, reportsProductionRoute, reportsPractitionersRoute, reportsPatientsRoute, indexRoute]);
+export const routeTree = rootRoute.addChildren([dashboardRoute, loginRoute, registerRoute, patientsRoute, patientDetailRoute, appointmentTypesRoute, providersRoute, chairsRoute, availabilityRoute, apiKeysRoute, appointmentsRoute, clinicalNotesRoute, templatesRoute, dentalChartsRoute, toothConditionsRoute, treatmentHistoryRoute, treatmentPlansRoute, periodontalRecordsRoute, imagingStudiesRoute, imagingImagesRoute, imagingIntegrationsRoute, invoicesRoute, claimIntegrationsRoute, statementsRoute, communicationPreferencesRoute, communicationTemplatesRoute, appointmentRemindersRoute, servicesRoute, feesRoute, messagesRoute, paymentsRoute, receiptsRoute, notificationsRoute, recallsRoute, refundsRoute, patientPortalRoute, patientPortalAppointmentsRoute, patientPortalTreatmentPlansRoute, patientPortalBillingRoute, patientPortalFormsRoute, patientPortalDashboardRoute, patientPortalLoginRoute, patientPortalPaymentsRoute, patientPortalDocumentsRoute, patientPortalNotificationsRoute, patientPortalMessagesRoute, reportsRoute, reportsRevenueRoute, reportsCollectionsRoute, reportsAppointmentsRoute, reportsDashboardRoute, reportsRecallsRoute, reportsProductionRoute, reportsPractitionersRoute, reportsPatientsRoute, indexRoute]);

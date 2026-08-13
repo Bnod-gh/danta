@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../../prisma.service';
 import { MfaService } from '../mfa/mfa.service';
 import { ConfigService } from '@nestjs/config';
+import { LoginAttemptService } from './services/login-attempt.service';
 
 export interface JwtPayload {
   sub: string;
@@ -30,13 +31,26 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly mfaService: MfaService,
     private readonly configService: ConfigService,
+    private readonly loginAttemptService: LoginAttemptService,
   ) {}
 
   async validateUser(email: string, password: string) {
+    const isLocked = await this.loginAttemptService.isLocked(email);
+    if (isLocked) {
+      throw new BadRequestException('Account temporarily locked due to too many failed attempts. Please try again later.');
+    }
+
     const user = await this.usersService.findByEmail(email);
-    if (!user) return null;
+    if (!user) {
+      await this.loginAttemptService.recordAttempt(email, false);
+      return null;
+    }
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return null;
+    if (!valid) {
+      await this.loginAttemptService.recordAttempt(email, false);
+      return null;
+    }
+    await this.loginAttemptService.recordAttempt(email, true);
     return user;
   }
 
@@ -83,7 +97,7 @@ export class AuthService {
     const user = await this.usersService.create({
       ...data,
       passwordHash,
-    });
+    }, undefined);
     return this.login(user);
   }
 

@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
 @Injectable()
 export class EmailVerificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
   async verify(token: string) {
     const tokens = await this.prisma.emailVerificationToken.findMany({
@@ -22,7 +23,7 @@ export class EmailVerificationService {
 
     if (!verificationToken) throw new BadRequestException('Invalid token');
 
-    await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: verificationToken.userId },
       data: { status: 'active' },
     });
@@ -30,6 +31,15 @@ export class EmailVerificationService {
     await this.prisma.emailVerificationToken.update({
       where: { id: verificationToken.id },
       data: { usedAt: new Date() },
+    });
+
+    await this.auditService.log({
+      tenantId: user.tenantId,
+      userId: user.id,
+      action: 'email_verification.verified',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'success',
     });
 
     return { verified: true };
@@ -49,6 +59,15 @@ export class EmailVerificationService {
         token: tokenHash,
         expiresAt,
       },
+    });
+
+    await this.auditService.log({
+      tenantId: user.tenantId,
+      userId: user.id,
+      action: 'email_verification.resent',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'success',
     });
 
     return { message: 'If the email exists, a verification link will be sent', token: rawToken };

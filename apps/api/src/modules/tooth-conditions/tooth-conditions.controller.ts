@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ToothConditionsService } from './tooth-conditions.service';
 import type { CreateToothCondition, UpdateToothCondition } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class ToothConditionsController {
 
   @Get()
   @RequirePermissions('dental_chart:read')
-  async findAll(@Req() req: Request, @Query('dentalChartId') dentalChartId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('dentalChartId') dentalChartId?: string) {
     return this.toothConditionsService.findAll(user.tenantId, dentalChartId);
   }
 
   @Get(':id')
   @RequirePermissions('dental_chart:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.toothConditionsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('dental_chart:update')
-  async create(@Req() req: Request, @Body() body: CreateToothCondition) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateToothCondition) {
     return this.toothConditionsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('dental_chart:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateToothCondition) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateToothCondition) {
     return this.toothConditionsService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('dental_chart:update')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.toothConditionsService.remove(user.tenantId, user.id, id);
   }
 }

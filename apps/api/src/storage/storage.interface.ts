@@ -6,9 +6,7 @@ export interface StorageProvider {
 
 export const STORAGE_PROVIDERS = {
   local: 'local',
-  s3: 's3',
-  azure: 'azure',
-  gcs: 'gcs',
+  minio: 'minio',
 } as const;
 
 export type StorageProviderKey = keyof typeof STORAGE_PROVIDERS;

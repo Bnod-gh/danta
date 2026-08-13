@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../../prisma.service';
-import { ConfigService } from '@nestjs/config';
 
 export interface PatientJwtPayload {
   sub: string;
@@ -14,11 +13,12 @@ export interface PatientJwtPayload {
 
 @Injectable()
 export class PatientJwtStrategy extends PassportStrategy(Strategy, 'patient-jwt') {
-  constructor(private readonly prisma: PrismaService, configService: ConfigService) {
+  constructor(private readonly prisma: PrismaService) {
+    const jwtSecret = process.env.JWT_SECRET || '';
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET')!,
+      secretOrKey: jwtSecret,
     });
   }
 

@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { StatementsService } from './statements.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -13,8 +13,7 @@ export class StatementsController {
 
   @Get()
   @RequirePermissions('billing:read')
-  async generate(@Req() req: Request, @Query() query: StatementQuery) {
-    const user = req.user as any;
-    return this.statementsService.generate(user.tenantId, query);
+  async generate(@CurrentUser() user: AuthenticatedUser, @Query() query: StatementQuery) {
+    return this.statementsService.generate(user.tenantId, query, user.id);
   }
 }

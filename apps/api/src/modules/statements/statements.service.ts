@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { StatementQuery } from '@danta/schemas';
 
 @Injectable()
 export class StatementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
-  async generate(tenantId: string, query: StatementQuery) {
+  async generate(tenantId: string, query: StatementQuery, userId?: string) {
     const { patientId, fromDate, toDate } = query;
 
     const invoices = await this.prisma.invoice.findMany({
@@ -42,6 +43,15 @@ export class StatementsService {
     const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     const totalRefunds = refunds.reduce((sum, r) => sum + Number(r.amount), 0);
     const closingBalance = subtotal - totalPayments - totalRefunds;
+
+    await this.auditService.log({
+      tenantId,
+      userId,
+      action: 'statement.generated',
+      resourceType: 'statement',
+      result: 'success',
+      metadata: { patientId, fromDate, toDate, invoiceCount: invoices.length, paymentCount: payments.length, refundCount: refunds.length },
+    });
 
     return {
       patientId,

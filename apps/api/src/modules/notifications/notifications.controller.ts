@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, ParseIntPipe } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { NotificationsService } from './notifications.service';
 import type { CreateNotification, NotificationQuery } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,29 +13,25 @@ export class NotificationsController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@Req() req: Request, @Query() query: NotificationQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: NotificationQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
     return this.notificationsService.findAll(user.tenantId, query, skip, take);
   }
 
   @Get(':id')
   @RequirePermissions('communication:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.notificationsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('communication:manage')
-  async create(@Req() req: Request, @Body() body: CreateNotification) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateNotification) {
     return this.notificationsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id/read')
   @RequirePermissions('communication:read')
-  async markAsRead(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async markAsRead(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.notificationsService.markAsRead(user.tenantId, id);
   }
 }

@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AvailabilityService } from './availability.service';
 import type { CreateAvailability, UpdateAvailability } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class AvailabilityController {
 
   @Get()
   @RequirePermissions('calendar:read')
-  async findAll(@Req() req: Request, @Query('providerId') providerId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('providerId') providerId?: string) {
     return this.availabilityService.findAll(user.tenantId, providerId);
   }
 
   @Get(':id')
   @RequirePermissions('calendar:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.availabilityService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('calendar:create')
-  async create(@Req() req: Request, @Body() body: CreateAvailability) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAvailability) {
     return this.availabilityService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('calendar:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateAvailability) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateAvailability) {
     return this.availabilityService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('calendar:delete')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.availabilityService.remove(user.tenantId, user.id, id);
   }
 }

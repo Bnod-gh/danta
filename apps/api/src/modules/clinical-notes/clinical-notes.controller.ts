@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ClinicalNotesService } from './clinical-notes.service';
 import type { CreateClinicalNote, UpdateClinicalNote } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class ClinicalNotesController {
 
   @Get()
   @RequirePermissions('clinical:read')
-  async findAll(@Req() req: Request, @Query('patientId') patientId?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
     return this.clinicalNotesService.findAll(user.tenantId, patientId, skip, take);
   }
 
   @Get(':id')
   @RequirePermissions('clinical:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.clinicalNotesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('clinical:create')
-  async create(@Req() req: Request, @Body() body: CreateClinicalNote) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateClinicalNote) {
     return this.clinicalNotesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('clinical:amend')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateClinicalNote) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateClinicalNote) {
     return this.clinicalNotesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('clinical:amend')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.clinicalNotesService.remove(user.tenantId, user.id, id);
   }
 }

@@ -12,6 +12,6 @@ export const PRISMA_SERVICE = 'PRISMA_SERVICE';
     },
     PrismaService,
   ],
-  exports: [PRISMA_SERVICE],
+  exports: [PRISMA_SERVICE, PrismaService],
 })
 export class PrismaModule {}

@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { RefundsService } from './refunds.service';
 import type { CreateRefund, UpdateRefund, CreateCreditNote } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,43 +13,37 @@ export class RefundsController {
 
   @Get()
   @RequirePermissions('billing:read')
-  async findAll(@Req() req: Request, @Query('paymentId') paymentId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('paymentId') paymentId?: string) {
     return this.refundsService.findAll(user.tenantId, paymentId);
   }
 
   @Get(':id')
   @RequirePermissions('billing:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.refundsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('payment:process')
-  async create(@Req() req: Request, @Body() body: CreateRefund) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateRefund) {
     return this.refundsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('payment:process')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateRefund) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateRefund) {
     return this.refundsService.update(user.tenantId, user.id, id, body);
   }
 
   @Post('credit-notes')
   @RequirePermissions('billing:create')
-  async createCreditNote(@Req() req: Request, @Body() body: CreateCreditNote) {
-    const user = req.user as any;
+  async createCreditNote(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateCreditNote) {
     return this.refundsService.createCreditNote(user.tenantId, user.id, body);
   }
 
   @Get('credit-notes/:id')
   @RequirePermissions('billing:read')
-  async getCreditNote(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async getCreditNote(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.refundsService.getCreditNote(user.tenantId, id);
   }
 }

@@ -1,12 +1,13 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import type { UserRole } from '@prisma/client';
 
 @Injectable()
 export class InvitationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
   async create(data: { tenantId: string; email: string; role: UserRole }) {
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -21,6 +22,15 @@ export class InvitationsService {
         token: tokenHash,
         expiresAt,
       },
+    });
+
+    await this.auditService.log({
+      tenantId: data.tenantId,
+      action: 'invitation.created',
+      resourceType: 'invitation',
+      resourceId: invitation.id,
+      result: 'success',
+      metadata: { email: invitation.email, role: invitation.role },
     });
 
     return { invitation, token: rawToken };
@@ -58,6 +68,16 @@ export class InvitationsService {
     await this.prisma.invitation.update({
       where: { id: invitation.id },
       data: { acceptedAt: new Date() },
+    });
+
+    await this.auditService.log({
+      tenantId: invitation.tenantId,
+      userId: user.id,
+      action: 'invitation.accepted',
+      resourceType: 'invitation',
+      resourceId: invitation.id,
+      result: 'success',
+      metadata: { email: user.email, role: user.role },
     });
 
     return user;

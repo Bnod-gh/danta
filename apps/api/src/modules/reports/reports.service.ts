@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
-import { ReportQuery } from '@danta/schemas';
+import { ReportQuery, ExportQuery, ClaimsAnalytics, PaymentAnalytics, TreatmentAcceptance, ChairUtilization, NoShowAnalysis } from '@danta/schemas';
 
 @Injectable()
 export class ReportsService {
@@ -524,5 +524,346 @@ export class ReportsService {
       retention: { returningPatients, retentionRate },
       topVisitors: Array.from(visitorMap.values()).sort((a, b) => b.visitCount - a.visitCount),
     };
+  }
+
+  async getClaims(tenantId: string, _query: ReportQuery): Promise<ClaimsAnalytics> {
+    const integrations = await this.prisma.claimIntegration.findMany({ where: { tenantId } });
+
+    const totalIntegrations = integrations.length;
+    const activeIntegrations = integrations.filter((i) => i.isActive).length;
+
+    const byProvider = integrations.map((i) => ({
+      provider: i.provider,
+      count: 1,
+      active: i.isActive,
+      healthStatus: i.healthStatus ?? 'unknown',
+    }));
+
+    const healthStatusMap = new Map<string, number>();
+    for (const i of integrations) {
+      const status = i.healthStatus ?? 'unknown';
+      healthStatusMap.set(status, (healthStatusMap.get(status) || 0) + 1);
+    }
+    const healthStatusDistribution = Array.from(healthStatusMap.entries()).map(([status, count]) => ({
+      status,
+      count,
+    }));
+
+    return {
+      totalIntegrations,
+      activeIntegrations,
+      byProvider,
+      healthStatusDistribution,
+    };
+  }
+
+  async getPayments(tenantId: string, query: ReportQuery): Promise<PaymentAnalytics> {
+    const dateFilter = this.getDateFilter(query);
+    const where = { tenantId, ...dateFilter };
+
+    const [totalPayments, totalAmount, payments] = await Promise.all([
+      this.prisma.payment.count({ where: { ...where, status: 'completed' } }),
+      this.prisma.payment.aggregate({ where: { ...where, status: 'completed' }, _sum: { amount: true } }).then((r) => r._sum.amount || 0),
+      this.prisma.payment.findMany({
+        where: { ...where, status: 'completed' },
+        select: { method: true, amount: true, receivedAt: true },
+        take: 10000,
+      }),
+    ]);
+
+    const byMethodMap = new Map<string, { count: number; amount: number }>();
+    const byStatusMap = new Map<string, { count: number; amount: number }>();
+    const dailyMap = new Map<string, { date: string; count: number; amount: number }>();
+
+    for (const p of payments) {
+      const methodKey = p.method;
+      const amount = Number(p.amount);
+      byMethodMap.set(methodKey, { count: (byMethodMap.get(methodKey)?.count || 0) + 1, amount: (byMethodMap.get(methodKey)?.amount || 0) + amount });
+      const statusKey = 'completed';
+      byStatusMap.set(statusKey, { count: (byStatusMap.get(statusKey)?.count || 0) + 1, amount: (byStatusMap.get(statusKey)?.amount || 0) + amount });
+      const date = new Date(p.receivedAt).toISOString().split('T')[0];
+      dailyMap.set(date, { date, count: (dailyMap.get(date)?.count || 0) + 1, amount: (dailyMap.get(date)?.amount || 0) + amount });
+    }
+
+    return {
+      totalPayments,
+      totalAmount: Number(totalAmount),
+      averageAmount: totalPayments > 0 ? Number(totalAmount) / totalPayments : 0,
+      byMethod: Array.from(byMethodMap.entries()).map(([method, data]) => ({ method, ...data })),
+      byStatus: Array.from(byStatusMap.entries()).map(([status, data]) => ({ status, ...data })),
+      daily: Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
+    };
+  }
+
+  async getTreatmentAcceptance(tenantId: string, query: ReportQuery): Promise<TreatmentAcceptance> {
+    const dateFilter = this.getDateFilter(query);
+    const where = { tenantId, ...dateFilter };
+
+    const [totalPlans, acceptedPlans, byProvider, byMonth] = await Promise.all([
+      this.prisma.treatmentPlan.count({ where }),
+      this.prisma.treatmentPlan.count({ where: { ...where, status: { in: ['approved', 'in_progress', 'completed'] } } }),
+      this.getTreatmentAcceptanceByProvider(tenantId, dateFilter),
+      this.getTreatmentAcceptanceByMonth(tenantId, dateFilter),
+    ]);
+
+    const totalAcceptedValue = 0;
+    const acceptanceRate = totalPlans > 0 ? (acceptedPlans / totalPlans) * 100 : 0;
+
+    return {
+      totalTreatmentPlans: totalPlans,
+      acceptedPlans,
+      acceptanceRate,
+      totalAcceptedValue,
+      byProvider,
+      byMonth,
+    };
+  }
+
+  private async getTreatmentAcceptanceByProvider(tenantId: string, dateFilter: any) {
+    const plans = await this.prisma.treatmentPlan.groupBy({
+      by: ['providerId'],
+      where: { tenantId, ...dateFilter },
+      _count: { _all: true },
+    });
+
+    const providerIds = plans.map((p) => p.providerId);
+    const providers = providerIds.length > 0
+      ? await this.prisma.provider.findMany({ where: { id: { in: providerIds } }, select: { id: true, firstName: true, lastName: true } })
+      : [];
+    const providerMap = new Map(providers.map((p) => [p.id, `${p.firstName} ${p.lastName}`]));
+
+    return plans.map((p) => {
+      const providerName = providerMap.get(p.providerId) || 'Unknown';
+      const accepted = 0;
+      return {
+        providerId: p.providerId,
+        providerName,
+        totalPlans: p._count._all,
+        acceptedPlans: accepted,
+        acceptanceRate: 0,
+        totalValue: 0,
+      };
+    });
+  }
+
+  private async getTreatmentAcceptanceByMonth(tenantId: string, dateFilter: any) {
+    const plans = await this.prisma.treatmentPlan.findMany({
+      where: { tenantId, ...dateFilter },
+      select: { createdAt: true, status: true },
+      take: 10000,
+    });
+
+    const map = new Map<string, { month: string; totalPlans: number; acceptedPlans: number; acceptanceRate: number; totalValue: number }>();
+    for (const p of plans) {
+      const month = new Date(p.createdAt).toISOString().slice(0, 7);
+      const existing = map.get(month) || { month, totalPlans: 0, acceptedPlans: 0, acceptanceRate: 0, totalValue: 0 };
+      existing.totalPlans += 1;
+      if (['approved', 'in_progress', 'completed'].includes(p.status)) existing.acceptedPlans += 1;
+      existing.acceptanceRate = existing.totalPlans > 0 ? (existing.acceptedPlans / existing.totalPlans) * 100 : 0;
+      map.set(month, existing);
+    }
+    return Array.from(map.values()).sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  async getChairUtilization(tenantId: string, query: ReportQuery): Promise<ChairUtilization> {
+    const dateFilter = this.getDateFilter(query);
+    const where = { tenantId, ...dateFilter };
+
+    const [chairs, appointments] = await Promise.all([
+      this.prisma.chair.findMany({ where: { tenantId, isActive: true } }),
+      this.prisma.appointment.findMany({
+        where,
+        include: { appointmentType: true, chair: true },
+        take: 10000,
+      }),
+    ]);
+
+    const chairStats = new Map<string, {
+      chairId: string;
+      chairName: string;
+      locationId?: string;
+      locationName?: string;
+      totalAppointments: number;
+      completedAppointments: number;
+      totalDuration: number;
+    }>();
+
+    for (const a of appointments) {
+      const existing = chairStats.get(a.chairId) || {
+        chairId: a.chairId,
+        chairName: a.chair.name,
+        locationId: a.chair.locationId ?? undefined,
+        totalAppointments: 0,
+        completedAppointments: 0,
+        totalDuration: 0,
+      };
+      existing.totalAppointments += 1;
+      if (a.status === 'completed') {
+        existing.completedAppointments += 1;
+        existing.totalDuration += a.appointmentType.duration;
+      }
+      chairStats.set(a.chairId, existing);
+    }
+
+    const totalSlots = chairs.length * 24 * 60;
+    const byChair = Array.from(chairStats.values()).map((c) => ({
+      chairId: c.chairId,
+      chairName: c.chairName,
+      locationId: c.locationId,
+      totalAppointments: c.totalAppointments,
+      completedAppointments: c.completedAppointments,
+      utilizationRate: totalSlots > 0 ? (c.totalDuration / totalSlots) * 100 : 0,
+      averageDuration: c.completedAppointments > 0 ? Math.round(c.totalDuration / c.completedAppointments) : 0,
+    }));
+
+    const totalDuration = byChair.reduce((sum, c) => sum + c.utilizationRate, 0);
+    const overallUtilizationRate = chairs.length > 0 ? totalDuration / chairs.length : 0;
+
+    return {
+      totalChairs: chairs.length,
+      activeChairs: chairs.filter((c) => c.isActive).length,
+      byChair,
+      overallUtilizationRate,
+    };
+  }
+
+  async getNoShows(tenantId: string, query: ReportQuery): Promise<NoShowAnalysis> {
+    const dateFilter = this.getDateFilter(query);
+    const where = { tenantId, ...dateFilter };
+
+    const [totalAppointments, totalNoShows, appointments] = await Promise.all([
+      this.prisma.appointment.count({ where }),
+      this.prisma.appointment.count({ where: { ...where, status: 'no_show' } }),
+      this.prisma.appointment.findMany({
+        where,
+        include: { appointmentType: true, provider: { select: { id: true, firstName: true, lastName: true } } },
+        take: 10000,
+      }),
+    ]);
+
+    const noShowRate = totalAppointments > 0 ? (totalNoShows / totalAppointments) * 100 : 0;
+
+    const byProviderMap = new Map<string, { providerId: string; providerName: string; totalAppointments: number; noShows: number }>();
+    const byTypeMap = new Map<string, { typeId: string; typeName: string; totalAppointments: number; noShows: number }>();
+    const byDayMap = new Map<string, { day: string; totalAppointments: number; noShows: number }>();
+    const byHourMap = new Map<number, { hour: number; totalAppointments: number; noShows: number }>();
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    for (const a of appointments) {
+      const isNoShow = a.status === 'no_show';
+      const providerName = `${a.provider.firstName} ${a.provider.lastName}`;
+      const typeName = a.appointmentType.name;
+
+      const providerKey = a.providerId;
+      const existingProvider = byProviderMap.get(providerKey) || { providerId: providerKey, providerName, totalAppointments: 0, noShows: 0 };
+      existingProvider.totalAppointments += 1;
+      if (isNoShow) existingProvider.noShows += 1;
+      byProviderMap.set(providerKey, existingProvider);
+
+      const typeKey = a.appointmentTypeId;
+      const existingType = byTypeMap.get(typeKey) || { typeId: typeKey, typeName, totalAppointments: 0, noShows: 0 };
+      existingType.totalAppointments += 1;
+      if (isNoShow) existingType.noShows += 1;
+      byTypeMap.set(typeKey, existingType);
+
+      const day = dayNames[new Date(a.startTime).getDay()];
+      const existingDay = byDayMap.get(day) || { day, totalAppointments: 0, noShows: 0 };
+      existingDay.totalAppointments += 1;
+      if (isNoShow) existingDay.noShows += 1;
+      byDayMap.set(day, existingDay);
+
+      const hour = new Date(a.startTime).getHours();
+      const existingHour = byHourMap.get(hour) || { hour, totalAppointments: 0, noShows: 0 };
+      existingHour.totalAppointments += 1;
+      if (isNoShow) existingHour.noShows += 1;
+      byHourMap.set(hour, existingHour);
+    }
+
+    const byProvider = Array.from(byProviderMap.values()).map((p) => ({
+      ...p,
+      noShowRate: p.totalAppointments > 0 ? (p.noShows / p.totalAppointments) * 100 : 0,
+    }));
+
+    const byType = Array.from(byTypeMap.values()).map((t) => ({
+      ...t,
+      noShowRate: t.totalAppointments > 0 ? (t.noShows / t.totalAppointments) * 100 : 0,
+    }));
+
+    const byDayOfWeek = Array.from(byDayMap.values()).map((d) => ({
+      ...d,
+      noShowRate: d.totalAppointments > 0 ? (d.noShows / d.totalAppointments) * 100 : 0,
+    }));
+
+    const byTimeOfDay = Array.from(byHourMap.values())
+      .sort((a, b) => a.hour - b.hour)
+      .map((h) => ({
+        ...h,
+        noShowRate: h.totalAppointments > 0 ? (h.noShows / h.totalAppointments) * 100 : 0,
+      }));
+
+    return {
+      totalAppointments,
+      totalNoShows,
+      noShowRate,
+      byProvider,
+      byType,
+      byDayOfWeek,
+      byTimeOfDay,
+    };
+  }
+
+  async exportReport(tenantId: string, reportType: string, _query: ExportQuery) {
+    let headers: string[] = [];
+    let rows: any[] = [];
+
+    switch (reportType) {
+      case 'revenue': {
+        const data = await this.getRevenue(tenantId, _query);
+        headers = ['date', 'revenue', 'payments', 'invoices'];
+        rows = data.daily;
+        break;
+      }
+      case 'production': {
+        const data = await this.getProduction(tenantId, _query);
+        headers = ['date', 'production', 'treatments'];
+        rows = data.daily;
+        break;
+      }
+      case 'collections': {
+        const data = await this.getCollections(tenantId, _query);
+        headers = ['status', 'count', 'amount'];
+        rows = data.byStatus;
+        break;
+      }
+      case 'appointments': {
+        const data = await this.getAppointments(tenantId, _query);
+        headers = ['date', 'count', 'completed', 'noShows'];
+        rows = data.daily;
+        break;
+      }
+      case 'patients': {
+        const data = await this.getPatients(tenantId, _query);
+        headers = ['gender', 'count'];
+        rows = data.byGender;
+        break;
+      }
+      case 'claims': {
+        const data = await this.getClaims(tenantId, _query);
+        headers = ['provider', 'count', 'active', 'healthStatus'];
+        rows = data.byProvider;
+        break;
+      }
+      case 'payments': {
+        const data = await this.getPayments(tenantId, _query);
+        headers = ['date', 'count', 'amount'];
+        rows = data.daily;
+        break;
+      }
+      default:
+        throw new Error(`Unsupported report type: ${reportType}`);
+    }
+
+    return { data: rows, headers };
   }
 }

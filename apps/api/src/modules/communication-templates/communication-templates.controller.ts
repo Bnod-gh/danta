@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { CommunicationTemplatesService } from './communication-templates.service';
 import type { CreateCommunicationTemplate, UpdateCommunicationTemplate } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class CommunicationTemplatesController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@Req() req: Request, @Query('category') category?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('category') category?: string) {
     return this.communicationTemplatesService.findAll(user.tenantId, category);
   }
 
   @Get(':id')
   @RequirePermissions('communication:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.communicationTemplatesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('communication:manage')
-  async create(@Req() req: Request, @Body() body: CreateCommunicationTemplate) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateCommunicationTemplate) {
     return this.communicationTemplatesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('communication:manage')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateCommunicationTemplate) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateCommunicationTemplate) {
     return this.communicationTemplatesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('communication:manage')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.communicationTemplatesService.remove(user.tenantId, user.id, id);
   }
 }

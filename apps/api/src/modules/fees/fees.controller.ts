@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { FeesService } from './fees.service';
 import type { CreateFeeSchedule, UpdateFeeSchedule } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class FeesController {
 
   @Get()
   @RequirePermissions('billing:read')
-  async findAll(@Req() req: Request, @Query('serviceId') serviceId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('serviceId') serviceId?: string) {
     return this.feesService.findAll(user.tenantId, serviceId);
   }
 
   @Get(':id')
   @RequirePermissions('billing:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.feesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('billing:create')
-  async create(@Req() req: Request, @Body() body: CreateFeeSchedule) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateFeeSchedule) {
     return this.feesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('billing:create')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateFeeSchedule) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateFeeSchedule) {
     return this.feesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('billing:create')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.feesService.remove(user.tenantId, user.id, id);
   }
 }

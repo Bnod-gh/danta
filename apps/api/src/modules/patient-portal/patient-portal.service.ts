@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/co
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { PatientRegister, PatientPortalToken } from '@danta/schemas';
 import { ConfigService } from '@nestjs/config';
 
@@ -15,7 +16,7 @@ export interface PatientJwtPayload {
 
 @Injectable()
 export class PatientPortalService {
-  constructor(private readonly prisma: PrismaService, private readonly jwtService: JwtService, private readonly configService: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly jwtService: JwtService, private readonly configService: ConfigService, private readonly auditService: AuditService) {}
 
   async validatePatient(tenantId: string, identifier: string, password: string) {
     const patient = await this.prisma.patient.findFirst({
@@ -57,6 +58,15 @@ export class PatientPortalService {
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRY') as any,
+    });
+
+    await this.auditService.log({
+      tenantId: patient.tenantId,
+      userId: patient.id,
+      action: 'patient_portal.login',
+      resourceType: 'patient',
+      resourceId: patient.id,
+      result: 'success',
     });
 
     return {
@@ -103,6 +113,15 @@ export class PatientPortalService {
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRY') as any,
+    });
+
+    await this.auditService.log({
+      tenantId: patient.tenantId,
+      userId: patient.id,
+      action: 'patient_portal.register',
+      resourceType: 'patient',
+      resourceId: patient.id,
+      result: 'success',
     });
 
     return {

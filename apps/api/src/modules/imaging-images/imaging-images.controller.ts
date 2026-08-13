@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ImagingImagesService } from './imaging-images.service';
 import type { CreateImagingImage, UpdateImagingImage } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class ImagingImagesController {
 
   @Get()
   @RequirePermissions('imaging:read')
-  async findAll(@Req() req: Request, @Query('imagingStudyId') imagingStudyId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('imagingStudyId') imagingStudyId?: string) {
     return this.imagingImagesService.findAll(user.tenantId, imagingStudyId);
   }
 
   @Get(':id')
   @RequirePermissions('imaging:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.imagingImagesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('imaging:upload')
-  async create(@Req() req: Request, @Body() body: CreateImagingImage) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateImagingImage) {
     return this.imagingImagesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('imaging:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateImagingImage) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateImagingImage) {
     return this.imagingImagesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('imaging:delete')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.imagingImagesService.remove(user.tenantId, user.id, id);
   }
 }

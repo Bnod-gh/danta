@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ClaimIntegrationsService } from './claim-integrations.service';
 import type { CreateClaimIntegration, UpdateClaimIntegration } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class ClaimIntegrationsController {
 
   @Get()
   @RequirePermissions('claims:read')
-  async findAll(@Req() req: Request, @Query('provider') provider?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('provider') provider?: string) {
     return this.claimIntegrationsService.findAll(user.tenantId, provider);
   }
 
   @Get(':id')
   @RequirePermissions('claims:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.claimIntegrationsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('claims:submit')
-  async create(@Req() req: Request, @Body() body: CreateClaimIntegration) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateClaimIntegration) {
     return this.claimIntegrationsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('claims:submit')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateClaimIntegration) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateClaimIntegration) {
     return this.claimIntegrationsService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('claims:submit')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.claimIntegrationsService.remove(user.tenantId, user.id, id);
   }
 }

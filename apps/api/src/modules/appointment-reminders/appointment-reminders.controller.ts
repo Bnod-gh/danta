@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AppointmentRemindersService } from './appointment-reminders.service';
 import type { CreateAppointmentReminder, UpdateAppointmentReminder } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,29 +13,25 @@ export class AppointmentRemindersController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@Req() req: Request, @Query('appointmentId') appointmentId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('appointmentId') appointmentId?: string) {
     return this.appointmentRemindersService.findAll(user.tenantId, appointmentId);
   }
 
   @Get(':id')
   @RequirePermissions('communication:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentRemindersService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('communication:manage')
-  async create(@Req() req: Request, @Body() body: CreateAppointmentReminder) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAppointmentReminder) {
     return this.appointmentRemindersService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('communication:manage')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateAppointmentReminder) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateAppointmentReminder) {
     return this.appointmentRemindersService.update(user.tenantId, user.id, id, body);
   }
 }

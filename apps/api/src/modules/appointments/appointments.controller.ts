@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AppointmentsService } from './appointments.service';
 import type { CreateAppointment, UpdateAppointment, AppointmentQuery } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class AppointmentsController {
 
   @Get()
   @RequirePermissions('calendar:read')
-  async findAll(@Req() req: Request, @Query() query: AppointmentQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: AppointmentQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
     return this.appointmentsService.findAll(user.tenantId, query, skip, take);
   }
 
   @Get(':id')
   @RequirePermissions('calendar:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('calendar:create')
-  async create(@Req() req: Request, @Body() body: CreateAppointment) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAppointment) {
     return this.appointmentsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('calendar:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateAppointment) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateAppointment) {
     return this.appointmentsService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('calendar:delete')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentsService.remove(user.tenantId, user.id, id);
   }
 }

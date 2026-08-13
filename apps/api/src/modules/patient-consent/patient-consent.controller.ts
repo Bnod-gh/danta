@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PatientConsentService } from './patient-consent.service';
 import type { CreatePatientConsent, UpdatePatientConsent } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,29 +13,25 @@ export class PatientConsentController {
 
   @Get()
   @RequirePermissions('patient:read')
-  async findAll(@Req() req: Request, @Param('patientId') patientId: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Param('patientId') patientId: string) {
     return this.patientConsentService.findAll(user.tenantId, patientId);
   }
 
   @Post()
   @RequirePermissions('patient:update')
-  async create(@Req() req: Request, @Param('patientId') patientId: string, @Body() body: CreatePatientConsent) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Param('patientId') patientId: string, @Body() body: CreatePatientConsent) {
     return this.patientConsentService.create(user.tenantId, patientId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('patient:update')
-  async update(@Req() req: Request, @Param('patientId') patientId: string, @Param('id') id: string, @Body() body: UpdatePatientConsent) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('patientId') patientId: string, @Param('id') id: string, @Body() body: UpdatePatientConsent) {
     return this.patientConsentService.update(user.tenantId, patientId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('patient:update')
-  async remove(@Req() req: Request, @Param('patientId') patientId: string, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('patientId') patientId: string, @Param('id') id: string) {
     return this.patientConsentService.remove(user.tenantId, patientId, user.id, id);
   }
 }

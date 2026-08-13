@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TreatmentHistoryService } from './treatment-history.service';
 import type { CreateTreatmentHistory, UpdateTreatmentHistory } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class TreatmentHistoryController {
 
   @Get()
   @RequirePermissions('clinical:read')
-  async findAll(@Req() req: Request, @Query('patientId') patientId?: string) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string) {
     return this.treatmentHistoryService.findAll(user.tenantId, patientId);
   }
 
   @Get(':id')
   @RequirePermissions('clinical:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.treatmentHistoryService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('clinical:create')
-  async create(@Req() req: Request, @Body() body: CreateTreatmentHistory) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateTreatmentHistory) {
     return this.treatmentHistoryService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('clinical:amend')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateTreatmentHistory) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateTreatmentHistory) {
     return this.treatmentHistoryService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('clinical:amend')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.treatmentHistoryService.remove(user.tenantId, user.id, id);
   }
 }

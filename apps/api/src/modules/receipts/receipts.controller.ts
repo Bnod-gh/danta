@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards, Req, Param } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ReceiptsService } from './receipts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -12,8 +12,7 @@ export class ReceiptsController {
 
   @Get(':paymentId')
   @RequirePermissions('billing:read')
-  async generate(@Req() req: Request, @Param('paymentId') paymentId: string) {
-    const user = req.user as any;
-    return this.receiptsService.generate(user.tenantId, paymentId);
+  async generate(@CurrentUser() user: AuthenticatedUser, @Param('paymentId') paymentId: string) {
+    return this.receiptsService.generate(user.tenantId, paymentId, user.id);
   }
 }

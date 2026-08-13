@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PatientFormsService } from './patient-forms.service';
 import type { CreatePatientForm, UpdatePatientForm, PatientFormQuery } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class PatientFormsController {
 
   @Get()
   @RequirePermissions('patient:read')
-  async findAll(@Req() req: Request, @Query() query: PatientFormQuery) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: PatientFormQuery) {
     return this.patientFormsService.findAll(user.tenantId, query);
   }
 
   @Get(':id')
   @RequirePermissions('patient:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.patientFormsService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('patient:create')
-  async create(@Req() req: Request, @Body() body: CreatePatientForm) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreatePatientForm) {
     return this.patientFormsService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('patient:update')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdatePatientForm) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdatePatientForm) {
     return this.patientFormsService.update(user.tenantId, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('patient:delete')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.patientFormsService.remove(user.tenantId, id);
   }
 }

@@ -112,6 +112,18 @@ model UserSession {
   @@index([refreshToken])
 }
 
+model LoginAttempt {
+  email         String    @id @db.VarChar(255)
+  attempts      Int       @default(0)
+  lockedUntil    DateTime? @db.Timestamptz()
+  lastAttemptAt DateTime  @default(now()) @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+
+  @@map("login_attempts")
+  @@index([lockedUntil])
+  @@index([lastAttemptAt])
+}
+
 model MFAFactor {
   id         String    @id @default(uuid()) @db.Uuid
   userId     String    @db.Uuid
@@ -127,24 +139,40 @@ model MFAFactor {
   @@map("mfa_factors")
 }
 
-model ApiKey {
-  id          String    @id @default(uuid()) @db.Uuid
-  tenantId    String    @db.Uuid
-  userId      String    @db.Uuid
-  name        String    @db.VarChar(255)
-  keyHash     String    @db.VarChar(255)
-  keyPrefix   String    @db.VarChar(16)
-  scopes      Json
-  lastUsedAt  DateTime? @db.Timestamptz()
-  expiresAt   DateTime? @db.Timestamptz()
-  revokedAt   DateTime? @db.Timestamptz()
-  createdAt   DateTime  @default(now()) @db.Timestamptz()
+enum Environment {
+  DEV
+  STAGING
+  PROD
+}
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ApiKey {
+  id               String     @id @default(uuid()) @db.Uuid
+  tenantId         String     @db.Uuid
+  userId           String     @db.Uuid
+  name             String     @db.VarChar(255)
+  env              Environment @default(PROD)
+  version          Int        @default(1)
+  keyHash          String     @db.VarChar(255)
+  keyPrefix        String     @db.VarChar(16) @unique
+  scopes           Json
+  rateLimit        Json?
+  ipAllowlist      Json?
+  lastUsedAt       DateTime?  @db.Timestamptz()
+  expiresAt        DateTime?  @db.Timestamptz()
+  revokedAt        DateTime?  @db.Timestamptz()
+  revokedBy        String?
+  revocationReason String?
+  graceExpiresAt   DateTime?  @db.Timestamptz()
+  previousKeyId    String?    @db.Uuid
+  createdAt        DateTime   @default(now()) @db.Timestamptz()
+  updatedAt        DateTime   @updatedAt @db.Timestamptz()
+
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  previousKey      ApiKey?    @relation("KeyRotation", fields: [previousKeyId], references: [id])
+  nextKeys         ApiKey[]   @relation("KeyRotation")
 
   @@map("api_keys")
   @@index([tenantId])
-  @@index([keyHash])
 }
 
 model Role {
@@ -331,6 +359,7 @@ model Patient {
   @@index([tenantId, dateOfBirth])
   @@index([tenantId, email])
   @@index([tenantId, phone])
+  @@index([tenantId, createdAt])
 }
 
 model PatientForm {
@@ -679,6 +708,7 @@ model Appointment {
   @@index([tenantId, patientId])
   @@index([tenantId, providerId])
   @@index([tenantId, startTime, endTime])
+  @@index([tenantId, startTime, status])
 }
 
 model ClinicalNote {
@@ -758,7 +788,7 @@ model TreatmentHistory {
   providerId    String    @db.Uuid
   treatment     String    @db.VarChar(255)
   description   String?   @db.VarChar(1000)
-  cost          Float?
+  cost          Decimal?  @db.Decimal(10, 2)
   date          DateTime  @default(now()) @db.Timestamptz()
   status        String    @default("completed") @db.VarChar(50)
   createdAt     DateTime  @default(now()) @db.Timestamptz()
@@ -770,6 +800,8 @@ model TreatmentHistory {
   @@map("treatment_history")
   @@index([tenantId, patientId])
   @@index([tenantId, appointmentId])
+  @@index([tenantId, date])
+  @@index([tenantId, providerId])
 }
 
 model TreatmentPlan {
@@ -1013,6 +1045,7 @@ model Invoice {
   @@map("invoices")
   @@index([tenantId, patientId])
   @@index([tenantId, status])
+  @@index([tenantId, status, issueDate])
   @@index([tenantId, issueDate])
 }
 
@@ -1056,6 +1089,7 @@ model Payment {
   @@map("payments")
   @@index([tenantId, patientId])
   @@index([tenantId, status])
+  @@index([tenantId, status, receivedAt])
   @@index([providerTxId])
 }
 

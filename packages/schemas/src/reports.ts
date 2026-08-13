@@ -13,9 +13,140 @@ export const ReportQuerySchema = z.object({
   providerId: z.string().uuid().optional(),
   patientId: z.string().uuid().optional(),
   appointmentTypeId: z.string().uuid().optional(),
+  chairId: z.string().uuid().optional(),
+  locationId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().positive().max(1000).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 export type ReportQuery = z.infer<typeof ReportQuerySchema>;
+
+export const ExportQuerySchema = z.object({
+  format: z.enum(['csv']).default('csv'),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  providerId: z.string().uuid().optional(),
+  patientId: z.string().uuid().optional(),
+  appointmentTypeId: z.string().uuid().optional(),
+});
+
+export type ExportQuery = z.infer<typeof ExportQuerySchema>;
+
+export const ClaimsAnalyticsSchema = z.object({
+  totalIntegrations: z.number().int().nonnegative(),
+  activeIntegrations: z.number().int().nonnegative(),
+  byProvider: z.array(z.object({
+    provider: z.string(),
+    count: z.number().int().nonnegative(),
+    active: z.boolean(),
+    healthStatus: z.string().optional(),
+  })),
+  healthStatusDistribution: z.array(z.object({
+    status: z.string(),
+    count: z.number().int().nonnegative(),
+  })),
+});
+
+export type ClaimsAnalytics = z.infer<typeof ClaimsAnalyticsSchema>;
+
+export const PaymentAnalyticsSchema = z.object({
+  totalPayments: z.number().int().nonnegative(),
+  totalAmount: z.number(),
+  averageAmount: z.number(),
+  byMethod: z.array(z.object({
+    method: z.string(),
+    count: z.number().int().nonnegative(),
+    amount: z.number(),
+  })),
+  byStatus: z.array(z.object({
+    status: z.string(),
+    count: z.number().int().nonnegative(),
+    amount: z.number(),
+  })),
+  daily: z.array(z.object({
+    date: z.string(),
+    count: z.number().int().nonnegative(),
+    amount: z.number(),
+  })),
+});
+
+export type PaymentAnalytics = z.infer<typeof PaymentAnalyticsSchema>;
+
+export const TreatmentAcceptanceSchema = z.object({
+  totalTreatmentPlans: z.number().int().nonnegative(),
+  acceptedPlans: z.number().int().nonnegative(),
+  acceptanceRate: z.number(),
+  totalAcceptedValue: z.number(),
+  byProvider: z.array(z.object({
+    providerId: z.string(),
+    providerName: z.string(),
+    totalPlans: z.number().int().nonnegative(),
+    acceptedPlans: z.number().int().nonnegative(),
+    acceptanceRate: z.number(),
+    totalValue: z.number(),
+  })),
+  byMonth: z.array(z.object({
+    month: z.string(),
+    totalPlans: z.number().int().nonnegative(),
+    acceptedPlans: z.number().int().nonnegative(),
+    acceptanceRate: z.number(),
+    totalValue: z.number(),
+  })),
+});
+
+export type TreatmentAcceptance = z.infer<typeof TreatmentAcceptanceSchema>;
+
+export const ChairUtilizationSchema = z.object({
+  totalChairs: z.number().int().nonnegative(),
+  activeChairs: z.number().int().nonnegative(),
+  byChair: z.array(z.object({
+    chairId: z.string(),
+    chairName: z.string(),
+    locationId: z.string().optional(),
+    locationName: z.string().optional(),
+    totalAppointments: z.number().int().nonnegative(),
+    completedAppointments: z.number().int().nonnegative(),
+    utilizationRate: z.number(),
+    averageDuration: z.number(),
+  })),
+  overallUtilizationRate: z.number(),
+});
+
+export type ChairUtilization = z.infer<typeof ChairUtilizationSchema>;
+
+export const NoShowAnalysisSchema = z.object({
+  totalAppointments: z.number().int().nonnegative(),
+  totalNoShows: z.number().int().nonnegative(),
+  noShowRate: z.number(),
+  byProvider: z.array(z.object({
+    providerId: z.string(),
+    providerName: z.string(),
+    totalAppointments: z.number().int().nonnegative(),
+    noShows: z.number().int().nonnegative(),
+    noShowRate: z.number(),
+  })),
+  byType: z.array(z.object({
+    typeId: z.string(),
+    typeName: z.string(),
+    totalAppointments: z.number().int().nonnegative(),
+    noShows: z.number().int().nonnegative(),
+    noShowRate: z.number(),
+  })),
+  byDayOfWeek: z.array(z.object({
+    day: z.string(),
+    totalAppointments: z.number().int().nonnegative(),
+    noShows: z.number().int().nonnegative(),
+    noShowRate: z.number(),
+  })),
+  byTimeOfDay: z.array(z.object({
+    hour: z.number().int().nonnegative(),
+    totalAppointments: z.number().int().nonnegative(),
+    noShows: z.number().int().nonnegative(),
+    noShowRate: z.number(),
+  })),
+});
+
+export type NoShowAnalysis = z.infer<typeof NoShowAnalysisSchema>;
 
 export const DashboardKpiSchema = z.object({
   todayAppointments: z.number().int().nonnegative(),

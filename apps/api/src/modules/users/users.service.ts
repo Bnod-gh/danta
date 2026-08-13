@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
   async findById(tenantId?: string, id?: string) {
     const where: any = {};
@@ -21,8 +22,8 @@ export class UsersService {
     });
   }
 
-  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; tenantId: string; role: string; organisationId?: string; practiceId?: string; locationId?: string }) {
-    return this.prisma.user.create({
+  async create(data: { email: string; passwordHash: string; firstName: string; lastName: string; tenantId: string; role: string; organisationId?: string; practiceId?: string; locationId?: string }, userId?: string) {
+    const user = await this.prisma.user.create({
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
@@ -35,6 +36,18 @@ export class UsersService {
         locationId: data.locationId,
       },
     });
+
+    await this.auditService.log({
+      tenantId: data.tenantId,
+      userId,
+      action: 'user.create',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'success',
+      metadata: { email: user.email, role: user.role },
+    });
+
+    return user;
   }
 
   async createSession(userId: string, refreshToken: string) {

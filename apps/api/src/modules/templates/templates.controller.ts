@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Put, Delete } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, Delete } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TemplatesService } from './templates.service';
 import type { CreateTemplate, UpdateTemplate } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,36 +13,31 @@ export class TemplatesController {
 
   @Get()
   @RequirePermissions('clinical:read')
-  async findAll(@Req() req: Request) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.templatesService.findAll(user.tenantId);
   }
 
   @Get(':id')
   @RequirePermissions('clinical:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.templatesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('clinical:create')
-  async create(@Req() req: Request, @Body() body: CreateTemplate) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateTemplate) {
     return this.templatesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('clinical:amend')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateTemplate) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateTemplate) {
     return this.templatesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('clinical:amend')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.templatesService.remove(user.tenantId, user.id, id);
   }
 }

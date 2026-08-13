@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
+import { AuditService } from '../audit/audit.service';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
 @Injectable()
 export class PasswordResetService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
   async requestReset(email: string) {
     const user = await this.prisma.user.findFirst({ where: { email } });
@@ -21,6 +22,15 @@ export class PasswordResetService {
         token: tokenHash,
         expiresAt,
       },
+    });
+
+    await this.auditService.log({
+      tenantId: user.tenantId,
+      userId: user.id,
+      action: 'password_reset.requested',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'success',
     });
 
     return { message: 'If the email exists, a reset link will be sent', token: rawToken };
@@ -43,7 +53,7 @@ export class PasswordResetService {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: resetToken.userId },
       data: { passwordHash },
     });
@@ -56,6 +66,15 @@ export class PasswordResetService {
     await this.prisma.passwordResetToken.update({
       where: { id: resetToken.id },
       data: { usedAt: new Date() },
+    });
+
+    await this.auditService.log({
+      tenantId: user.tenantId,
+      userId: user.id,
+      action: 'password_reset.completed',
+      resourceType: 'user',
+      resourceId: user.id,
+      result: 'success',
     });
 
     return { message: 'Password reset successfully' };

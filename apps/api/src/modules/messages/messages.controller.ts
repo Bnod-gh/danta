@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, ParseIntPipe } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { MessagesService } from './messages.service';
 import type { CreateMessage, UpdateMessage, MessageQuery } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,29 +13,25 @@ export class MessagesController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@Req() req: Request, @Query() query: MessageQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: MessageQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
     return this.messagesService.findAll(user.tenantId, query, skip, take);
   }
 
   @Get(':id')
   @RequirePermissions('communication:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.messagesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('communication:manage')
-  async create(@Req() req: Request, @Body() body: CreateMessage) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateMessage) {
     return this.messagesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('communication:manage')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateMessage) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateMessage) {
     return this.messagesService.update(user.tenantId, user.id, id, body);
   }
 }

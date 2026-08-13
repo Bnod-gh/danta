@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { InvoicesService } from './invoices.service';
 import type { CreateInvoice, UpdateInvoice, CreateInvoiceItem, UpdateInvoiceItem } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,57 +13,49 @@ export class InvoicesController {
 
   @Get()
   @RequirePermissions('billing:read')
-  async findAll(@Req() req: Request, @Query('patientId') patientId?: string, @Query('status') status?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
-    const user = req.user as any;
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('status') status?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
     return this.invoicesService.findAll(user.tenantId, patientId, status, skip, take);
   }
 
   @Get(':id')
   @RequirePermissions('billing:read')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.invoicesService.findOne(user.tenantId, id);
   }
 
   @Post()
   @RequirePermissions('billing:create')
-  async create(@Req() req: Request, @Body() body: CreateInvoice) {
-    const user = req.user as any;
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateInvoice) {
     return this.invoicesService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @RequirePermissions('billing:create')
-  async update(@Req() req: Request, @Param('id') id: string, @Body() body: UpdateInvoice) {
-    const user = req.user as any;
+  async update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: UpdateInvoice) {
     return this.invoicesService.update(user.tenantId, user.id, id, body);
   }
 
   @Delete(':id')
   @RequirePermissions('billing:create')
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const user = req.user as any;
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.invoicesService.remove(user.tenantId, user.id, id);
   }
 
   @Post(':id/items')
   @RequirePermissions('billing:create')
-  async addItem(@Req() req: Request, @Param('id') id: string, @Body() body: CreateInvoiceItem) {
-    const user = req.user as any;
+  async addItem(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: CreateInvoiceItem) {
     return this.invoicesService.addItem(user.tenantId, user.id, id, body);
   }
 
   @Put('items/:itemId')
   @RequirePermissions('billing:create')
-  async updateItem(@Req() req: Request, @Param('itemId') itemId: string, @Body() body: UpdateInvoiceItem) {
-    const user = req.user as any;
+  async updateItem(@CurrentUser() user: AuthenticatedUser, @Param('itemId') itemId: string, @Body() body: UpdateInvoiceItem) {
     return this.invoicesService.updateItem(user.tenantId, user.id, itemId, body);
   }
 
   @Delete('items/:itemId')
   @RequirePermissions('billing:create')
-  async removeItem(@Req() req: Request, @Param('itemId') itemId: string) {
-    const user = req.user as any;
+  async removeItem(@CurrentUser() user: AuthenticatedUser, @Param('itemId') itemId: string) {
     return this.invoicesService.removeItem(user.tenantId, user.id, itemId);
   }
 }

@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet, Link } from '@tanstack/react-router';
 
-export const rootRoute = createRootRoute({
+export const Route = createRootRoute({
   component: () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
@@ -38,6 +38,10 @@ export const rootRoute = createRootRoute({
                 <Link to="/reports/practitioners" className="block px-3 py-2 rounded-md hover:bg-muted">Practitioners</Link>
                 <Link to="/reports/recalls" className="block px-3 py-2 rounded-md hover:bg-muted">Recalls</Link>
                 <Link to="/reports/patients" className="block px-3 py-2 rounded-md hover:bg-muted">Patients</Link>
+              </div>
+              <div className="pt-2 mt-2 border-t">
+                <p className="px-3 text-xs font-medium text-muted-foreground mb-2">Administration</p>
+                <Link to="/api-keys" className="block px-3 py-2 rounded-md hover:bg-muted">API Keys</Link>
               </div>
             </nav>
           </aside>
