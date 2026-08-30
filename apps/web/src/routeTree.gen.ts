@@ -9,23 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ApiKeysIndexRouteImport } from './routes/api-keys/index'
 import { Route as AppointmentRemindersIndexRouteImport } from './routes/appointment-reminders/index'
 import { Route as AppointmentTypesIndexRouteImport } from './routes/appointment-types/index'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments/index'
-import { Route as AvailabilityIndexRouteImport } from './routes/availability/index'
+import { Route as AuditIndexRouteImport } from './routes/audit/index'
 import { Route as ChairsIndexRouteImport } from './routes/chairs/index'
 import { Route as ClaimIntegrationsIndexRouteImport } from './routes/claim-integrations/index'
 import { Route as ClinicalNotesIndexRouteImport } from './routes/clinical-notes/index'
 import { Route as CommunicationPreferencesIndexRouteImport } from './routes/communication-preferences/index'
 import { Route as CommunicationTemplatesIndexRouteImport } from './routes/communication-templates/index'
+import { Route as DashboardExampleIndexRouteImport } from './routes/dashboard-example/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DentalChartsIndexRouteImport } from './routes/dental-charts/index'
 import { Route as FeesIndexRouteImport } from './routes/fees/index'
+import { Route as ForbiddenIndexRouteImport } from './routes/forbidden/index'
+import { Route as ForgotPasswordIndexRouteImport } from './routes/forgot-password/index'
 import { Route as ImagingImagesIndexRouteImport } from './routes/imaging-images/index'
 import { Route as ImagingIntegrationsIndexRouteImport } from './routes/imaging-integrations/index'
 import { Route as ImagingStudiesIndexRouteImport } from './routes/imaging-studies/index'
 import { Route as InvoicesIndexRouteImport } from './routes/invoices/index'
+import { Route as LocationsIndexRouteImport } from './routes/locations/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages/index'
+import { Route as MfaVerifyIndexRouteImport } from './routes/mfa-verify/index'
 import { Route as NotificationsIndexRouteImport } from './routes/notifications/index'
 import { Route as PatientPortalIndexRouteImport } from './routes/patient-portal/index'
 import { Route as PatientsIndexRouteImport } from './routes/patients/index'
@@ -38,12 +45,21 @@ import { Route as ReceiptsIndexRouteImport } from './routes/receipts/index'
 import { Route as RefundsIndexRouteImport } from './routes/refunds/index'
 import { Route as RegisterIndexRouteImport } from './routes/register/index'
 import { Route as ReportsIndexRouteImport } from './routes/reports/index'
+import { Route as ResetPasswordIndexRouteImport } from './routes/reset-password/index'
+import { Route as RolesIndexRouteImport } from './routes/roles/index'
+import { Route as ScheduleIndexRouteImport } from './routes/schedule/index'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as SettingsSectionRouteImport } from './routes/settings/$section'
 import { Route as StatementsIndexRouteImport } from './routes/statements/index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates/index'
 import { Route as ToothConditionsIndexRouteImport } from './routes/tooth-conditions/index'
 import { Route as TreatmentHistoryIndexRouteImport } from './routes/treatment-history/index'
 import { Route as TreatmentPlansIndexRouteImport } from './routes/treatment-plans/index'
+import { Route as UnauthorizedIndexRouteImport } from './routes/unauthorized/index'
+import { Route as UsersIndexRouteImport } from './routes/users/index'
+import { Route as TenantIdDashboardIndexRouteImport } from './routes/$tenantId/dashboard/index'
+import { Route as TenantIdDashboardSplatRouteImport } from './routes/$tenantId/dashboard/$'
 import { Route as PatientPortalAppointmentsIndexRouteImport } from './routes/patient-portal/appointments/index'
 import { Route as PatientPortalBillingIndexRouteImport } from './routes/patient-portal/billing/index'
 import { Route as PatientPortalDashboardIndexRouteImport } from './routes/patient-portal/dashboard/index'
@@ -62,8 +78,16 @@ import { Route as ReportsPractitionersIndexRouteImport } from './routes/reports/
 import { Route as ReportsProductionIndexRouteImport } from './routes/reports/production/index'
 import { Route as ReportsRecallsIndexRouteImport } from './routes/reports/recalls/index'
 import { Route as ReportsRevenueIndexRouteImport } from './routes/reports/revenue/index'
-import { Route as ApiKeysIndexRouteImport } from './routes/api-keys/index'
+import { Route as SettingsLocationsIndexRouteImport } from './routes/settings/locations/index'
+import { Route as SettingsOrganisationIndexRouteImport } from './routes/settings/organisation/index'
+import { Route as SettingsPracticeIndexRouteImport } from './routes/settings/practice/index'
+import { Route as SettingsSecurityIndexRouteImport } from './routes/settings/security/index'
 
+const ApiKeysIndexRoute = ApiKeysIndexRouteImport.update({
+  id: '/api-keys/',
+  path: '/api-keys/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppointmentRemindersIndexRoute =
   AppointmentRemindersIndexRouteImport.update({
     id: '/appointment-reminders/',
@@ -80,14 +104,9 @@ const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
   path: '/appointments/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AvailabilityIndexRoute = AvailabilityIndexRouteImport.update({
-  id: '/availability/',
-  path: '/availability/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiKeysIndexRoute = ApiKeysIndexRouteImport.update({
-  id: '/api-keys/',
-  path: '/api-keys/',
+const AuditIndexRoute = AuditIndexRouteImport.update({
+  id: '/audit/',
+  path: '/audit/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChairsIndexRoute = ChairsIndexRouteImport.update({
@@ -117,6 +136,16 @@ const CommunicationTemplatesIndexRoute =
     path: '/communication-templates/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DashboardExampleIndexRoute = DashboardExampleIndexRouteImport.update({
+  id: '/dashboard-example/',
+  path: '/dashboard-example/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DentalChartsIndexRoute = DentalChartsIndexRouteImport.update({
   id: '/dental-charts/',
   path: '/dental-charts/',
@@ -125,6 +154,16 @@ const DentalChartsIndexRoute = DentalChartsIndexRouteImport.update({
 const FeesIndexRoute = FeesIndexRouteImport.update({
   id: '/fees/',
   path: '/fees/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForbiddenIndexRoute = ForbiddenIndexRouteImport.update({
+  id: '/forbidden/',
+  path: '/forbidden/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordIndexRoute = ForgotPasswordIndexRouteImport.update({
+  id: '/forgot-password/',
+  path: '/forgot-password/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImagingImagesIndexRoute = ImagingImagesIndexRouteImport.update({
@@ -148,6 +187,11 @@ const InvoicesIndexRoute = InvoicesIndexRouteImport.update({
   path: '/invoices/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocationsIndexRoute = LocationsIndexRouteImport.update({
+  id: '/locations/',
+  path: '/locations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginIndexRoute = LoginIndexRouteImport.update({
   id: '/login/',
   path: '/login/',
@@ -156,6 +200,11 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
 const MessagesIndexRoute = MessagesIndexRouteImport.update({
   id: '/messages/',
   path: '/messages/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MfaVerifyIndexRoute = MfaVerifyIndexRouteImport.update({
+  id: '/mfa-verify/',
+  path: '/mfa-verify/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
@@ -218,9 +267,34 @@ const ReportsIndexRoute = ReportsIndexRouteImport.update({
   path: '/reports/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordIndexRoute = ResetPasswordIndexRouteImport.update({
+  id: '/reset-password/',
+  path: '/reset-password/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesIndexRoute = RolesIndexRouteImport.update({
+  id: '/roles/',
+  path: '/roles/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScheduleIndexRoute = ScheduleIndexRouteImport.update({
+  id: '/schedule/',
+  path: '/schedule/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesIndexRoute = ServicesIndexRouteImport.update({
   id: '/services/',
   path: '/services/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsSectionRoute = SettingsSectionRouteImport.update({
+  id: '/settings/$section',
+  path: '/settings/$section',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StatementsIndexRoute = StatementsIndexRouteImport.update({
@@ -246,6 +320,26 @@ const TreatmentHistoryIndexRoute = TreatmentHistoryIndexRouteImport.update({
 const TreatmentPlansIndexRoute = TreatmentPlansIndexRouteImport.update({
   id: '/treatment-plans/',
   path: '/treatment-plans/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnauthorizedIndexRoute = UnauthorizedIndexRouteImport.update({
+  id: '/unauthorized/',
+  path: '/unauthorized/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersIndexRoute = UsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantIdDashboardIndexRoute = TenantIdDashboardIndexRouteImport.update({
+  id: '/$tenantId/dashboard/',
+  path: '/$tenantId/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantIdDashboardSplatRoute = TenantIdDashboardSplatRouteImport.update({
+  id: '/$tenantId/dashboard/$',
+  path: '/$tenantId/dashboard/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatientPortalAppointmentsIndexRoute =
@@ -348,26 +442,55 @@ const ReportsRevenueIndexRoute = ReportsRevenueIndexRouteImport.update({
   path: '/reports/revenue/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsLocationsIndexRoute = SettingsLocationsIndexRouteImport.update({
+  id: '/settings/locations/',
+  path: '/settings/locations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsOrganisationIndexRoute =
+  SettingsOrganisationIndexRouteImport.update({
+    id: '/settings/organisation/',
+    path: '/settings/organisation/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SettingsPracticeIndexRoute = SettingsPracticeIndexRouteImport.update({
+  id: '/settings/practice/',
+  path: '/settings/practice/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsSecurityIndexRoute = SettingsSecurityIndexRouteImport.update({
+  id: '/settings/security/',
+  path: '/settings/security/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/patients/$id': typeof PatientsIdRoute
+  '/settings/$section': typeof SettingsSectionRoute
+  '/api-keys/': typeof ApiKeysIndexRoute
   '/appointment-reminders/': typeof AppointmentRemindersIndexRoute
   '/appointment-types/': typeof AppointmentTypesIndexRoute
   '/appointments/': typeof AppointmentsIndexRoute
-  '/availability/': typeof AvailabilityIndexRoute
+  '/audit/': typeof AuditIndexRoute
   '/chairs/': typeof ChairsIndexRoute
   '/claim-integrations/': typeof ClaimIntegrationsIndexRoute
   '/clinical-notes/': typeof ClinicalNotesIndexRoute
   '/communication-preferences/': typeof CommunicationPreferencesIndexRoute
   '/communication-templates/': typeof CommunicationTemplatesIndexRoute
+  '/dashboard-example/': typeof DashboardExampleIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/dental-charts/': typeof DentalChartsIndexRoute
   '/fees/': typeof FeesIndexRoute
+  '/forbidden/': typeof ForbiddenIndexRoute
+  '/forgot-password/': typeof ForgotPasswordIndexRoute
   '/imaging-images/': typeof ImagingImagesIndexRoute
   '/imaging-integrations/': typeof ImagingIntegrationsIndexRoute
   '/imaging-studies/': typeof ImagingStudiesIndexRoute
   '/invoices/': typeof InvoicesIndexRoute
+  '/locations/': typeof LocationsIndexRoute
   '/login/': typeof LoginIndexRoute
   '/messages/': typeof MessagesIndexRoute
+  '/mfa-verify/': typeof MfaVerifyIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/patient-portal/': typeof PatientPortalIndexRoute
   '/patients/': typeof PatientsIndexRoute
@@ -379,12 +502,20 @@ export interface FileRoutesByFullPath {
   '/refunds/': typeof RefundsIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/reset-password/': typeof ResetPasswordIndexRoute
+  '/roles/': typeof RolesIndexRoute
+  '/schedule/': typeof ScheduleIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/statements/': typeof StatementsIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/tooth-conditions/': typeof ToothConditionsIndexRoute
   '/treatment-history/': typeof TreatmentHistoryIndexRoute
   '/treatment-plans/': typeof TreatmentPlansIndexRoute
+  '/unauthorized/': typeof UnauthorizedIndexRoute
+  '/users/': typeof UsersIndexRoute
+  '/$tenantId/dashboard/$': typeof TenantIdDashboardSplatRoute
+  '/$tenantId/dashboard/': typeof TenantIdDashboardIndexRoute
   '/patient-portal/appointments/': typeof PatientPortalAppointmentsIndexRoute
   '/patient-portal/billing/': typeof PatientPortalBillingIndexRoute
   '/patient-portal/dashboard/': typeof PatientPortalDashboardIndexRoute
@@ -403,26 +534,38 @@ export interface FileRoutesByFullPath {
   '/reports/production/': typeof ReportsProductionIndexRoute
   '/reports/recalls/': typeof ReportsRecallsIndexRoute
   '/reports/revenue/': typeof ReportsRevenueIndexRoute
+  '/settings/locations/': typeof SettingsLocationsIndexRoute
+  '/settings/organisation/': typeof SettingsOrganisationIndexRoute
+  '/settings/practice/': typeof SettingsPracticeIndexRoute
+  '/settings/security/': typeof SettingsSecurityIndexRoute
 }
 export interface FileRoutesByTo {
   '/patients/$id': typeof PatientsIdRoute
+  '/settings/$section': typeof SettingsSectionRoute
+  '/api-keys': typeof ApiKeysIndexRoute
   '/appointment-reminders': typeof AppointmentRemindersIndexRoute
   '/appointment-types': typeof AppointmentTypesIndexRoute
   '/appointments': typeof AppointmentsIndexRoute
-  '/availability': typeof AvailabilityIndexRoute
+  '/audit': typeof AuditIndexRoute
   '/chairs': typeof ChairsIndexRoute
   '/claim-integrations': typeof ClaimIntegrationsIndexRoute
   '/clinical-notes': typeof ClinicalNotesIndexRoute
   '/communication-preferences': typeof CommunicationPreferencesIndexRoute
   '/communication-templates': typeof CommunicationTemplatesIndexRoute
+  '/dashboard-example': typeof DashboardExampleIndexRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/dental-charts': typeof DentalChartsIndexRoute
   '/fees': typeof FeesIndexRoute
+  '/forbidden': typeof ForbiddenIndexRoute
+  '/forgot-password': typeof ForgotPasswordIndexRoute
   '/imaging-images': typeof ImagingImagesIndexRoute
   '/imaging-integrations': typeof ImagingIntegrationsIndexRoute
   '/imaging-studies': typeof ImagingStudiesIndexRoute
   '/invoices': typeof InvoicesIndexRoute
+  '/locations': typeof LocationsIndexRoute
   '/login': typeof LoginIndexRoute
   '/messages': typeof MessagesIndexRoute
+  '/mfa-verify': typeof MfaVerifyIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/patient-portal': typeof PatientPortalIndexRoute
   '/patients': typeof PatientsIndexRoute
@@ -434,12 +577,20 @@ export interface FileRoutesByTo {
   '/refunds': typeof RefundsIndexRoute
   '/register': typeof RegisterIndexRoute
   '/reports': typeof ReportsIndexRoute
+  '/reset-password': typeof ResetPasswordIndexRoute
+  '/roles': typeof RolesIndexRoute
+  '/schedule': typeof ScheduleIndexRoute
   '/services': typeof ServicesIndexRoute
+  '/settings': typeof SettingsIndexRoute
   '/statements': typeof StatementsIndexRoute
   '/templates': typeof TemplatesIndexRoute
   '/tooth-conditions': typeof ToothConditionsIndexRoute
   '/treatment-history': typeof TreatmentHistoryIndexRoute
   '/treatment-plans': typeof TreatmentPlansIndexRoute
+  '/unauthorized': typeof UnauthorizedIndexRoute
+  '/users': typeof UsersIndexRoute
+  '/$tenantId/dashboard/$': typeof TenantIdDashboardSplatRoute
+  '/$tenantId/dashboard': typeof TenantIdDashboardIndexRoute
   '/patient-portal/appointments': typeof PatientPortalAppointmentsIndexRoute
   '/patient-portal/billing': typeof PatientPortalBillingIndexRoute
   '/patient-portal/dashboard': typeof PatientPortalDashboardIndexRoute
@@ -458,27 +609,39 @@ export interface FileRoutesByTo {
   '/reports/production': typeof ReportsProductionIndexRoute
   '/reports/recalls': typeof ReportsRecallsIndexRoute
   '/reports/revenue': typeof ReportsRevenueIndexRoute
+  '/settings/locations': typeof SettingsLocationsIndexRoute
+  '/settings/organisation': typeof SettingsOrganisationIndexRoute
+  '/settings/practice': typeof SettingsPracticeIndexRoute
+  '/settings/security': typeof SettingsSecurityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/patients/$id': typeof PatientsIdRoute
+  '/settings/$section': typeof SettingsSectionRoute
+  '/api-keys/': typeof ApiKeysIndexRoute
   '/appointment-reminders/': typeof AppointmentRemindersIndexRoute
   '/appointment-types/': typeof AppointmentTypesIndexRoute
   '/appointments/': typeof AppointmentsIndexRoute
-  '/availability/': typeof AvailabilityIndexRoute
+  '/audit/': typeof AuditIndexRoute
   '/chairs/': typeof ChairsIndexRoute
   '/claim-integrations/': typeof ClaimIntegrationsIndexRoute
   '/clinical-notes/': typeof ClinicalNotesIndexRoute
   '/communication-preferences/': typeof CommunicationPreferencesIndexRoute
   '/communication-templates/': typeof CommunicationTemplatesIndexRoute
+  '/dashboard-example/': typeof DashboardExampleIndexRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/dental-charts/': typeof DentalChartsIndexRoute
   '/fees/': typeof FeesIndexRoute
+  '/forbidden/': typeof ForbiddenIndexRoute
+  '/forgot-password/': typeof ForgotPasswordIndexRoute
   '/imaging-images/': typeof ImagingImagesIndexRoute
   '/imaging-integrations/': typeof ImagingIntegrationsIndexRoute
   '/imaging-studies/': typeof ImagingStudiesIndexRoute
   '/invoices/': typeof InvoicesIndexRoute
+  '/locations/': typeof LocationsIndexRoute
   '/login/': typeof LoginIndexRoute
   '/messages/': typeof MessagesIndexRoute
+  '/mfa-verify/': typeof MfaVerifyIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/patient-portal/': typeof PatientPortalIndexRoute
   '/patients/': typeof PatientsIndexRoute
@@ -490,12 +653,20 @@ export interface FileRoutesById {
   '/refunds/': typeof RefundsIndexRoute
   '/register/': typeof RegisterIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/reset-password/': typeof ResetPasswordIndexRoute
+  '/roles/': typeof RolesIndexRoute
+  '/schedule/': typeof ScheduleIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/statements/': typeof StatementsIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/tooth-conditions/': typeof ToothConditionsIndexRoute
   '/treatment-history/': typeof TreatmentHistoryIndexRoute
   '/treatment-plans/': typeof TreatmentPlansIndexRoute
+  '/unauthorized/': typeof UnauthorizedIndexRoute
+  '/users/': typeof UsersIndexRoute
+  '/$tenantId/dashboard/$': typeof TenantIdDashboardSplatRoute
+  '/$tenantId/dashboard/': typeof TenantIdDashboardIndexRoute
   '/patient-portal/appointments/': typeof PatientPortalAppointmentsIndexRoute
   '/patient-portal/billing/': typeof PatientPortalBillingIndexRoute
   '/patient-portal/dashboard/': typeof PatientPortalDashboardIndexRoute
@@ -514,29 +685,40 @@ export interface FileRoutesById {
   '/reports/production/': typeof ReportsProductionIndexRoute
   '/reports/recalls/': typeof ReportsRecallsIndexRoute
   '/reports/revenue/': typeof ReportsRevenueIndexRoute
+  '/settings/locations/': typeof SettingsLocationsIndexRoute
+  '/settings/organisation/': typeof SettingsOrganisationIndexRoute
+  '/settings/practice/': typeof SettingsPracticeIndexRoute
+  '/settings/security/': typeof SettingsSecurityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/patients/$id'
+    | '/settings/$section'
     | '/api-keys/'
     | '/appointment-reminders/'
     | '/appointment-types/'
     | '/appointments/'
-    | '/availability/'
+    | '/audit/'
     | '/chairs/'
     | '/claim-integrations/'
     | '/clinical-notes/'
     | '/communication-preferences/'
     | '/communication-templates/'
+    | '/dashboard-example/'
+    | '/dashboard/'
     | '/dental-charts/'
     | '/fees/'
+    | '/forbidden/'
+    | '/forgot-password/'
     | '/imaging-images/'
     | '/imaging-integrations/'
     | '/imaging-studies/'
     | '/invoices/'
+    | '/locations/'
     | '/login/'
     | '/messages/'
+    | '/mfa-verify/'
     | '/notifications/'
     | '/patient-portal/'
     | '/patients/'
@@ -548,12 +730,20 @@ export interface FileRouteTypes {
     | '/refunds/'
     | '/register/'
     | '/reports/'
+    | '/reset-password/'
+    | '/roles/'
+    | '/schedule/'
     | '/services/'
+    | '/settings/'
     | '/statements/'
     | '/templates/'
     | '/tooth-conditions/'
     | '/treatment-history/'
     | '/treatment-plans/'
+    | '/unauthorized/'
+    | '/users/'
+    | '/$tenantId/dashboard/$'
+    | '/$tenantId/dashboard/'
     | '/patient-portal/appointments/'
     | '/patient-portal/billing/'
     | '/patient-portal/dashboard/'
@@ -572,26 +762,38 @@ export interface FileRouteTypes {
     | '/reports/production/'
     | '/reports/recalls/'
     | '/reports/revenue/'
+    | '/settings/locations/'
+    | '/settings/organisation/'
+    | '/settings/practice/'
+    | '/settings/security/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/patients/$id'
+    | '/settings/$section'
+    | '/api-keys'
     | '/appointment-reminders'
     | '/appointment-types'
     | '/appointments'
-    | '/availability'
+    | '/audit'
     | '/chairs'
     | '/claim-integrations'
     | '/clinical-notes'
     | '/communication-preferences'
     | '/communication-templates'
+    | '/dashboard-example'
+    | '/dashboard'
     | '/dental-charts'
     | '/fees'
+    | '/forbidden'
+    | '/forgot-password'
     | '/imaging-images'
     | '/imaging-integrations'
     | '/imaging-studies'
     | '/invoices'
+    | '/locations'
     | '/login'
     | '/messages'
+    | '/mfa-verify'
     | '/notifications'
     | '/patient-portal'
     | '/patients'
@@ -603,12 +805,20 @@ export interface FileRouteTypes {
     | '/refunds'
     | '/register'
     | '/reports'
+    | '/reset-password'
+    | '/roles'
+    | '/schedule'
     | '/services'
+    | '/settings'
     | '/statements'
     | '/templates'
     | '/tooth-conditions'
     | '/treatment-history'
     | '/treatment-plans'
+    | '/unauthorized'
+    | '/users'
+    | '/$tenantId/dashboard/$'
+    | '/$tenantId/dashboard'
     | '/patient-portal/appointments'
     | '/patient-portal/billing'
     | '/patient-portal/dashboard'
@@ -627,26 +837,38 @@ export interface FileRouteTypes {
     | '/reports/production'
     | '/reports/recalls'
     | '/reports/revenue'
+    | '/settings/locations'
+    | '/settings/organisation'
+    | '/settings/practice'
+    | '/settings/security'
   id:
     | '__root__'
     | '/patients/$id'
+    | '/settings/$section'
+    | '/api-keys/'
     | '/appointment-reminders/'
     | '/appointment-types/'
     | '/appointments/'
-    | '/availability/'
+    | '/audit/'
     | '/chairs/'
     | '/claim-integrations/'
     | '/clinical-notes/'
     | '/communication-preferences/'
     | '/communication-templates/'
+    | '/dashboard-example/'
+    | '/dashboard/'
     | '/dental-charts/'
     | '/fees/'
+    | '/forbidden/'
+    | '/forgot-password/'
     | '/imaging-images/'
     | '/imaging-integrations/'
     | '/imaging-studies/'
     | '/invoices/'
+    | '/locations/'
     | '/login/'
     | '/messages/'
+    | '/mfa-verify/'
     | '/notifications/'
     | '/patient-portal/'
     | '/patients/'
@@ -658,12 +880,20 @@ export interface FileRouteTypes {
     | '/refunds/'
     | '/register/'
     | '/reports/'
+    | '/reset-password/'
+    | '/roles/'
+    | '/schedule/'
     | '/services/'
+    | '/settings/'
     | '/statements/'
     | '/templates/'
     | '/tooth-conditions/'
     | '/treatment-history/'
     | '/treatment-plans/'
+    | '/unauthorized/'
+    | '/users/'
+    | '/$tenantId/dashboard/$'
+    | '/$tenantId/dashboard/'
     | '/patient-portal/appointments/'
     | '/patient-portal/billing/'
     | '/patient-portal/dashboard/'
@@ -682,28 +912,39 @@ export interface FileRouteTypes {
     | '/reports/production/'
     | '/reports/recalls/'
     | '/reports/revenue/'
+    | '/settings/locations/'
+    | '/settings/organisation/'
+    | '/settings/practice/'
+    | '/settings/security/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   PatientsIdRoute: typeof PatientsIdRoute
+  SettingsSectionRoute: typeof SettingsSectionRoute
+  ApiKeysIndexRoute: typeof ApiKeysIndexRoute
   AppointmentRemindersIndexRoute: typeof AppointmentRemindersIndexRoute
   AppointmentTypesIndexRoute: typeof AppointmentTypesIndexRoute
-  ApiKeysIndexRoute: typeof ApiKeysIndexRoute
   AppointmentsIndexRoute: typeof AppointmentsIndexRoute
-  AvailabilityIndexRoute: typeof AvailabilityIndexRoute
+  AuditIndexRoute: typeof AuditIndexRoute
   ChairsIndexRoute: typeof ChairsIndexRoute
   ClaimIntegrationsIndexRoute: typeof ClaimIntegrationsIndexRoute
   ClinicalNotesIndexRoute: typeof ClinicalNotesIndexRoute
   CommunicationPreferencesIndexRoute: typeof CommunicationPreferencesIndexRoute
   CommunicationTemplatesIndexRoute: typeof CommunicationTemplatesIndexRoute
+  DashboardExampleIndexRoute: typeof DashboardExampleIndexRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
   DentalChartsIndexRoute: typeof DentalChartsIndexRoute
   FeesIndexRoute: typeof FeesIndexRoute
+  ForbiddenIndexRoute: typeof ForbiddenIndexRoute
+  ForgotPasswordIndexRoute: typeof ForgotPasswordIndexRoute
   ImagingImagesIndexRoute: typeof ImagingImagesIndexRoute
   ImagingIntegrationsIndexRoute: typeof ImagingIntegrationsIndexRoute
   ImagingStudiesIndexRoute: typeof ImagingStudiesIndexRoute
   InvoicesIndexRoute: typeof InvoicesIndexRoute
+  LocationsIndexRoute: typeof LocationsIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
+  MfaVerifyIndexRoute: typeof MfaVerifyIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
   PatientPortalIndexRoute: typeof PatientPortalIndexRoute
   PatientsIndexRoute: typeof PatientsIndexRoute
@@ -715,12 +956,20 @@ export interface RootRouteChildren {
   RefundsIndexRoute: typeof RefundsIndexRoute
   RegisterIndexRoute: typeof RegisterIndexRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
+  ResetPasswordIndexRoute: typeof ResetPasswordIndexRoute
+  RolesIndexRoute: typeof RolesIndexRoute
+  ScheduleIndexRoute: typeof ScheduleIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
   StatementsIndexRoute: typeof StatementsIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   ToothConditionsIndexRoute: typeof ToothConditionsIndexRoute
   TreatmentHistoryIndexRoute: typeof TreatmentHistoryIndexRoute
   TreatmentPlansIndexRoute: typeof TreatmentPlansIndexRoute
+  UnauthorizedIndexRoute: typeof UnauthorizedIndexRoute
+  UsersIndexRoute: typeof UsersIndexRoute
+  TenantIdDashboardSplatRoute: typeof TenantIdDashboardSplatRoute
+  TenantIdDashboardIndexRoute: typeof TenantIdDashboardIndexRoute
   PatientPortalAppointmentsIndexRoute: typeof PatientPortalAppointmentsIndexRoute
   PatientPortalBillingIndexRoute: typeof PatientPortalBillingIndexRoute
   PatientPortalDashboardIndexRoute: typeof PatientPortalDashboardIndexRoute
@@ -739,10 +988,21 @@ export interface RootRouteChildren {
   ReportsProductionIndexRoute: typeof ReportsProductionIndexRoute
   ReportsRecallsIndexRoute: typeof ReportsRecallsIndexRoute
   ReportsRevenueIndexRoute: typeof ReportsRevenueIndexRoute
+  SettingsLocationsIndexRoute: typeof SettingsLocationsIndexRoute
+  SettingsOrganisationIndexRoute: typeof SettingsOrganisationIndexRoute
+  SettingsPracticeIndexRoute: typeof SettingsPracticeIndexRoute
+  SettingsSecurityIndexRoute: typeof SettingsSecurityIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/api-keys/': {
+      id: '/api-keys/'
+      path: '/api-keys'
+      fullPath: '/api-keys/'
+      preLoaderRoute: typeof ApiKeysIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/appointment-reminders/': {
       id: '/appointment-reminders/'
       path: '/appointment-reminders'
@@ -757,13 +1017,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppointmentTypesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api-keys/': {
-      id: '/api-keys/'
-      path: '/api-keys'
-      fullPath: '/api-keys/'
-      preLoaderRoute: typeof ApiKeysIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/appointments/': {
       id: '/appointments/'
       path: '/appointments'
@@ -771,11 +1024,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppointmentsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/availability/': {
-      id: '/availability/'
-      path: '/availability'
-      fullPath: '/availability/'
-      preLoaderRoute: typeof AvailabilityIndexRouteImport
+    '/audit/': {
+      id: '/audit/'
+      path: '/audit'
+      fullPath: '/audit/'
+      preLoaderRoute: typeof AuditIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chairs/': {
@@ -813,6 +1066,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommunicationTemplatesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard-example/': {
+      id: '/dashboard-example/'
+      path: '/dashboard-example'
+      fullPath: '/dashboard-example/'
+      preLoaderRoute: typeof DashboardExampleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dental-charts/': {
       id: '/dental-charts/'
       path: '/dental-charts'
@@ -825,6 +1092,20 @@ declare module '@tanstack/react-router' {
       path: '/fees'
       fullPath: '/fees/'
       preLoaderRoute: typeof FeesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forbidden/': {
+      id: '/forbidden/'
+      path: '/forbidden'
+      fullPath: '/forbidden/'
+      preLoaderRoute: typeof ForbiddenIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password/': {
+      id: '/forgot-password/'
+      path: '/forgot-password'
+      fullPath: '/forgot-password/'
+      preLoaderRoute: typeof ForgotPasswordIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/imaging-images/': {
@@ -855,6 +1136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvoicesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/locations/': {
+      id: '/locations/'
+      path: '/locations'
+      fullPath: '/locations/'
+      preLoaderRoute: typeof LocationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login/': {
       id: '/login/'
       path: '/login'
@@ -867,6 +1155,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages/'
       preLoaderRoute: typeof MessagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mfa-verify/': {
+      id: '/mfa-verify/'
+      path: '/mfa-verify'
+      fullPath: '/mfa-verify/'
+      preLoaderRoute: typeof MfaVerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications/': {
@@ -953,11 +1248,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password/': {
+      id: '/reset-password/'
+      path: '/reset-password'
+      fullPath: '/reset-password/'
+      preLoaderRoute: typeof ResetPasswordIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles/': {
+      id: '/roles/'
+      path: '/roles'
+      fullPath: '/roles/'
+      preLoaderRoute: typeof RolesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedule/': {
+      id: '/schedule/'
+      path: '/schedule'
+      fullPath: '/schedule/'
+      preLoaderRoute: typeof ScheduleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services/': {
       id: '/services/'
       path: '/services'
       fullPath: '/services/'
       preLoaderRoute: typeof ServicesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/$section': {
+      id: '/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/settings/$section'
+      preLoaderRoute: typeof SettingsSectionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/statements/': {
@@ -993,6 +1323,34 @@ declare module '@tanstack/react-router' {
       path: '/treatment-plans'
       fullPath: '/treatment-plans/'
       preLoaderRoute: typeof TreatmentPlansIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unauthorized/': {
+      id: '/unauthorized/'
+      path: '/unauthorized'
+      fullPath: '/unauthorized/'
+      preLoaderRoute: typeof UnauthorizedIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/': {
+      id: '/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof UsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$tenantId/dashboard/': {
+      id: '/$tenantId/dashboard/'
+      path: '/$tenantId/dashboard'
+      fullPath: '/$tenantId/dashboard/'
+      preLoaderRoute: typeof TenantIdDashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$tenantId/dashboard/$': {
+      id: '/$tenantId/dashboard/$'
+      path: '/$tenantId/dashboard/$'
+      fullPath: '/$tenantId/dashboard/$'
+      preLoaderRoute: typeof TenantIdDashboardSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patient-portal/appointments/': {
@@ -1121,29 +1479,64 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRevenueIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/locations/': {
+      id: '/settings/locations/'
+      path: '/settings/locations'
+      fullPath: '/settings/locations/'
+      preLoaderRoute: typeof SettingsLocationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/organisation/': {
+      id: '/settings/organisation/'
+      path: '/settings/organisation'
+      fullPath: '/settings/organisation/'
+      preLoaderRoute: typeof SettingsOrganisationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/practice/': {
+      id: '/settings/practice/'
+      path: '/settings/practice'
+      fullPath: '/settings/practice/'
+      preLoaderRoute: typeof SettingsPracticeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/security/': {
+      id: '/settings/security/'
+      path: '/settings/security'
+      fullPath: '/settings/security/'
+      preLoaderRoute: typeof SettingsSecurityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   PatientsIdRoute: PatientsIdRoute,
+  SettingsSectionRoute: SettingsSectionRoute,
+  ApiKeysIndexRoute: ApiKeysIndexRoute,
   AppointmentRemindersIndexRoute: AppointmentRemindersIndexRoute,
   AppointmentTypesIndexRoute: AppointmentTypesIndexRoute,
   AppointmentsIndexRoute: AppointmentsIndexRoute,
-  AvailabilityIndexRoute: AvailabilityIndexRoute,
-  ApiKeysIndexRoute: ApiKeysIndexRoute,
+  AuditIndexRoute: AuditIndexRoute,
   ChairsIndexRoute: ChairsIndexRoute,
   ClaimIntegrationsIndexRoute: ClaimIntegrationsIndexRoute,
   ClinicalNotesIndexRoute: ClinicalNotesIndexRoute,
   CommunicationPreferencesIndexRoute: CommunicationPreferencesIndexRoute,
   CommunicationTemplatesIndexRoute: CommunicationTemplatesIndexRoute,
+  DashboardExampleIndexRoute: DashboardExampleIndexRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
   DentalChartsIndexRoute: DentalChartsIndexRoute,
   FeesIndexRoute: FeesIndexRoute,
+  ForbiddenIndexRoute: ForbiddenIndexRoute,
+  ForgotPasswordIndexRoute: ForgotPasswordIndexRoute,
   ImagingImagesIndexRoute: ImagingImagesIndexRoute,
   ImagingIntegrationsIndexRoute: ImagingIntegrationsIndexRoute,
   ImagingStudiesIndexRoute: ImagingStudiesIndexRoute,
   InvoicesIndexRoute: InvoicesIndexRoute,
+  LocationsIndexRoute: LocationsIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   MessagesIndexRoute: MessagesIndexRoute,
+  MfaVerifyIndexRoute: MfaVerifyIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
   PatientPortalIndexRoute: PatientPortalIndexRoute,
   PatientsIndexRoute: PatientsIndexRoute,
@@ -1155,12 +1548,20 @@ const rootRouteChildren: RootRouteChildren = {
   RefundsIndexRoute: RefundsIndexRoute,
   RegisterIndexRoute: RegisterIndexRoute,
   ReportsIndexRoute: ReportsIndexRoute,
+  ResetPasswordIndexRoute: ResetPasswordIndexRoute,
+  RolesIndexRoute: RolesIndexRoute,
+  ScheduleIndexRoute: ScheduleIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
   StatementsIndexRoute: StatementsIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   ToothConditionsIndexRoute: ToothConditionsIndexRoute,
   TreatmentHistoryIndexRoute: TreatmentHistoryIndexRoute,
   TreatmentPlansIndexRoute: TreatmentPlansIndexRoute,
+  UnauthorizedIndexRoute: UnauthorizedIndexRoute,
+  UsersIndexRoute: UsersIndexRoute,
+  TenantIdDashboardSplatRoute: TenantIdDashboardSplatRoute,
+  TenantIdDashboardIndexRoute: TenantIdDashboardIndexRoute,
   PatientPortalAppointmentsIndexRoute: PatientPortalAppointmentsIndexRoute,
   PatientPortalBillingIndexRoute: PatientPortalBillingIndexRoute,
   PatientPortalDashboardIndexRoute: PatientPortalDashboardIndexRoute,
@@ -1179,6 +1580,10 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsProductionIndexRoute: ReportsProductionIndexRoute,
   ReportsRecallsIndexRoute: ReportsRecallsIndexRoute,
   ReportsRevenueIndexRoute: ReportsRevenueIndexRoute,
+  SettingsLocationsIndexRoute: SettingsLocationsIndexRoute,
+  SettingsOrganisationIndexRoute: SettingsOrganisationIndexRoute,
+  SettingsPracticeIndexRoute: SettingsPracticeIndexRoute,
+  SettingsSecurityIndexRoute: SettingsSecurityIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

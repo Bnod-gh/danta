@@ -926,6 +926,19 @@ model Chair {
 
 *This document should be updated as remediation progresses.*
 
+## Remediation update — 2026-08-21
+
+The following previously identified gaps are now addressed in the current tree:
+
+- JWT strategy construction now fails when `JWT_SECRET` is missing; the identity strategy has regression tests.
+- Gateway, identity, and practice now validate required environment variables at startup.
+- Root Jest orchestration tolerates packages that do not yet contain tests.
+- SMTP unit tests inject a fake transporter and do not open network connections.
+- CI now includes production build, Prisma validation/generation, dependency auditing, and secret scanning.
+- Web bundling now separates major vendor groups into dedicated chunks.
+
+The service/data ownership model is documented in `docs/architecture/service-ownership.md`.
+
 ### Phase 10 — Frontend API-Key Management
 - **Issue:** No frontend UI existed for API key management despite full backend implementation.
 - **Resolution:** Implemented frontend API-key management page at `/api-keys`:

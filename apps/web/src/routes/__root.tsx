@@ -1,55 +1,85 @@
-import { createRootRoute, Outlet, Link } from '@tanstack/react-router';
+﻿import { createRootRoute, Outlet, Link, useLocation, useRouter } from '@tanstack/react-router';
+import { useEffect } from 'react';
+import { useAuth } from '../lib/auth-context';
+import { ThemeProvider } from '../lib/theme-provider';
+import { Loader2 } from 'lucide-react';
+import { ErrorBoundary } from '../components/error-boundary';
+import { AppShell } from '../components/layout/AppShell';
+import { isTenantPath, tenantPath } from '../lib/tenant-routing';
+import { PUBLIC_ROUTES } from '../lib/public-routes';
 
 export const Route = createRootRoute({
-  component: () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+});
 
-    if (!token) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Danta</h1>
-            <p className="text-muted-foreground mb-6">Please sign in to continue</p>
-            <Link to="/login" className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
-              Sign In
-            </Link>
-          </div>
-        </div>
-      );
+function RootComponent() {
+  const { loading, user } = useAuth();
+  const location = useLocation();
+  const router = useRouter();
+
+  const currentPath = location.pathname;
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => currentPath === route || currentPath.startsWith(route + '/'),
+  );
+
+  const shouldScopeTenantPath = Boolean(user && !isPublicRoute && !isTenantPath(currentPath, user.tenantId));
+
+  useEffect(() => {
+    if (shouldScopeTenantPath && user) {
+      const requestedDashboardPath = currentPath.match(/\/dashboard(?:\/|$).*/)?.[0];
+      const canonicalPath = requestedDashboardPath
+        ? `/${user.tenantId}${requestedDashboardPath}`
+        : tenantPath(user.tenantId, currentPath);
+      window.location.replace(`${canonicalPath}${window.location.search}${window.location.hash}`);
     }
+  }, [currentPath, shouldScopeTenantPath, user]);
 
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="flex h-screen">
-          <aside className="w-64 border-r bg-muted/40">
-            <nav className="p-4 space-y-2">
-              <Link to="/dashboard" className="block px-3 py-2 rounded-md hover:bg-muted">Dashboard</Link>
-              <Link to="/calendar" className="block px-3 py-2 rounded-md hover:bg-muted">Calendar</Link>
-              <Link to="/patients" className="block px-3 py-2 rounded-md hover:bg-muted">Patients</Link>
-              <Link to="/appointments" className="block px-3 py-2 rounded-md hover:bg-muted">Appointments</Link>
-              <Link to="/invoices" className="block px-3 py-2 rounded-md hover:bg-muted">Billing</Link>
-              <div className="pt-2 mt-2 border-t">
-                <p className="px-3 text-xs font-medium text-muted-foreground mb-2">Reports</p>
-                <Link to="/reports" className="block px-3 py-2 rounded-md hover:bg-muted">Overview</Link>
-                <Link to="/reports/revenue" className="block px-3 py-2 rounded-md hover:bg-muted">Revenue</Link>
-                <Link to="/reports/production" className="block px-3 py-2 rounded-md hover:bg-muted">Production</Link>
-                <Link to="/reports/collections" className="block px-3 py-2 rounded-md hover:bg-muted">Collections</Link>
-                <Link to="/reports/appointments" className="block px-3 py-2 rounded-md hover:bg-muted">Appointments</Link>
-                <Link to="/reports/practitioners" className="block px-3 py-2 rounded-md hover:bg-muted">Practitioners</Link>
-                <Link to="/reports/recalls" className="block px-3 py-2 rounded-md hover:bg-muted">Recalls</Link>
-                <Link to="/reports/patients" className="block px-3 py-2 rounded-md hover:bg-muted">Patients</Link>
-              </div>
-              <div className="pt-2 mt-2 border-t">
-                <p className="px-3 text-xs font-medium text-muted-foreground mb-2">Administration</p>
-                <Link to="/api-keys" className="block px-3 py-2 rounded-md hover:bg-muted">API Keys</Link>
-              </div>
-            </nav>
-          </aside>
-          <main className="flex-1 overflow-auto p-6">
-            <Outlet />
-          </main>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
-  },
-});
+  }
+
+  if (isPublicRoute) {
+    return <ThemeProvider><Outlet /></ThemeProvider>;
+  }
+
+  if (!user) {
+    router.navigate({ to: '/login' });
+    return null;
+  }
+
+  if (shouldScopeTenantPath) return null;
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AppShell />
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+function NotFoundComponent() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
+        <h2 className="text-xl font-semibold">Page Not Found</h2>
+        <p className="text-muted-foreground">The page you are looking for does not exist.</p>
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          Back to Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}

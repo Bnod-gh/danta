@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ImagingModalitySchema = z.enum(['xray', 'ct', 'mri', 'panoramic', 'cbct', 'intraoral', 'extraoral', 'other']);
+export const ImagingModalitySchema = z.enum(['xray', 'bitewing', 'periapical', 'ct', 'mri', 'panoramic', 'cbct', 'intraoral', 'extraoral', 'other']);
 
 export const ImagingStudyStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'cancelled']);
 

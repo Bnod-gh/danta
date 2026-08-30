@@ -91,7 +91,7 @@ export class RefundsService {
     if (!invoice) throw new NotFoundException('Invoice not found');
 
     const creditNote = await this.prisma.creditNote.create({
-      data: { tenantId, ...data },
+      data: { tenantId, creditNoteNumber: `CN-${Date.now().toString(36).toUpperCase()}`, ...data },
       include: { invoice: true },
     });
 

@@ -1,17 +1,27 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import type { UserRole } from '@prisma/client';
 
 @Injectable()
 export class InvitationsService {
-  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
+  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService, private readonly configService: ConfigService) {}
+
+  private getDigestSecret(): string {
+    return this.configService.get<string>('JWT_SECRET') || 'default-secret';
+  }
+
+  private computeDigest(rawToken: string): string {
+    return crypto.createHmac('sha256', this.getDigestSecret()).update(rawToken).digest('hex');
+  }
 
   async create(data: { tenantId: string; email: string; role: UserRole }) {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = await bcrypt.hash(rawToken, 12);
+    const digest = this.computeDigest(rawToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const invitation = await this.prisma.invitation.create({
@@ -20,6 +30,7 @@ export class InvitationsService {
         email: data.email,
         role: data.role,
         token: tokenHash,
+        digest,
         expiresAt,
       },
     });
@@ -37,8 +48,9 @@ export class InvitationsService {
   }
 
   async accept(token: string, data: { password: string; firstName: string; lastName: string }) {
+    const digest = this.computeDigest(token);
     const invitations = await this.prisma.invitation.findMany({
-      where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+      where: { digest, acceptedAt: null, expiresAt: { gt: new Date() } },
     });
 
     let invitation = null;
@@ -80,6 +92,6 @@ export class InvitationsService {
       metadata: { email: user.email, role: user.role },
     });
 
-    return user;
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role };
   }
 }

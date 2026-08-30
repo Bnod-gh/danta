@@ -6,7 +6,7 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   async log(data: {
-    tenantId: string;
+    tenantId?: string;
     userId?: string;
     action: string;
     resourceType?: string;
@@ -19,7 +19,7 @@ export class AuditService {
   }) {
     return this.prisma.auditLog.create({
       data: {
-        tenantId: data.tenantId,
+        tenantId: data.tenantId === 'unknown' ? undefined : data.tenantId,
         userId: data.userId,
         action: data.action,
         resourceType: data.resourceType,
@@ -32,4 +32,19 @@ export class AuditService {
       },
     });
   }
+  async search(query: { tenantId?: string; action?: string; userId?: string; resourceType?: string; skip?: number; take?: number }) {
+    const where: any = { tenantId: query.tenantId };
+    if (query.action) where.action = query.action;
+    if (query.userId) where.userId = query.userId;
+    if (query.resourceType) where.resourceType = query.resourceType;
+    return this.prisma.auditLog.findMany({ where, skip: query.skip, take: query.take, orderBy: { createdAt: 'desc' } });
+  }
+
+  async stats(query: { tenantId?: string; startDate?: Date; endDate?: Date }) {
+    const where: any = { tenantId: query.tenantId };
+    if (query.startDate && query.endDate) where.createdAt = { gte: query.startDate, lte: query.endDate };
+    const total = await this.prisma.auditLog.count({ where });
+    return { total };
+  }
+
 }

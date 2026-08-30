@@ -185,4 +185,24 @@ export class AppointmentsService {
 
     return { deleted: true };
   }
+
+  async getDaySchedule(tenantId: string, date: string) {
+    const start = new Date(`${date}T00:00:00`);
+    const end = new Date(`${date}T23:59:59.999`);
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        tenantId,
+        startTime: { gte: start, lte: end },
+        status: { not: 'cancelled' },
+      },
+      include: {
+        patient: { select: { id: true, firstName: true, lastName: true, patientNumber: true } },
+        provider: { select: { id: true, firstName: true, lastName: true } },
+        chair: { select: { id: true, name: true } },
+        appointmentType: { select: { id: true, name: true, code: true, duration: true, color: true } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+    return { date, appointments };
+  }
 }

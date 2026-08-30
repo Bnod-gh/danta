@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl  = env("DATABASE_DIRECT_URL")
+}
+
+model User {
+  id                     String    @id @default(uuid()) @db.Uuid
+  tenantId               String    @db.Uuid
+  organisationId         String?   @db.Uuid
+  practiceId             String?   @db.Uuid
+  locationId             String?   @db.Uuid
+  email                  String    @unique @db.VarChar(255)
+  emailVerified          Boolean?  @default(false)
+  passwordHash           String    @db.VarChar(255)
+  firstName              String    @db.VarChar(100)
+  lastName               String    @db.VarChar(100)
+  phone                  String?   @db.VarChar(32)
+  role                   String    @default("receptionist") @db.VarChar(64)
+  status                 String    @default("pending") @db.VarChar(32)
+  lastLoginAt            DateTime? @db.Timestamptz()
+  createdAt              DateTime  @default(now()) @db.Timestamptz()
+  updatedAt              DateTime  @updatedAt @db.Timestamptz()
+
+  sessions               UserSession[]
+  mfaFactors             MFAFactor[]
+  apiKeys                ApiKey[]
+  roleAssignments        RoleAssignment[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+
+  @@map("users")
+  @@index([tenantId, email])
+  @@index([tenantId, role])
+  @@index([tenantId, status])
+}
+
+model UserSession {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  refreshToken String    @unique @db.VarChar(512)
+  ipAddress    String?   @db.VarChar(64)
+  userAgent    String?   @db.VarChar(512)
+  expiresAt    DateTime  @db.Timestamptz()
+  revokedAt    DateTime? @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+  @@index([userId])
+  @@index([refreshToken])
+}
+
+model MFAFactor {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  type       String    @default("totp") @db.VarChar(32)
+  secret     String    @db.VarChar(255)
+  backupCodes Json?     @default("[]")
+  verified   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mfa_factors")
+  @@index([userId])
+}
+
+model ApiKey {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @db.Uuid
+  userId         String    @db.Uuid
+  name           String    @db.VarChar(255)
+  keyHash        String    @db.VarChar(255)
+  keyPrefix      String    @db.VarChar(16)
+  scopes         Json
+  lastUsedAt     DateTime? @db.Timestamptz()
+  expiresAt      DateTime? @db.Timestamptz()
+  revokedAt      DateTime? @db.Timestamptz()
+  revokedBy      String?   @db.Uuid
+  revocationReason String?
+  graceExpiresAt DateTime? @db.Timestamptz()
+  env            String    @default("development") @db.VarChar(32)
+  version        Int       @default(1)
+  rateLimit      Json?
+  ipAllowlist    Json?
+  previousKeyId  String?   @db.Uuid
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+  @@index([tenantId])
+  @@index([keyPrefix])
+  @@index([keyHash])
+}
+
+model Role {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?
+  isSystem    Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  permissions RolePermission[]
+  assignments RoleAssignment[]
+
+  @@map("roles")
+  @@index([tenantId])
+}
+
+model Permission {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  resource    String    @db.VarChar(64)
+  action      String    @db.VarChar(64)
+  description String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+
+  roles       RolePermission[]
+
+  @@map("permissions")
+  @@index([tenantId, resource, action], type: "Hash")
+  @@index([tenantId])
+}
+
+model RolePermission {
+  id           String    @id @default(uuid()) @db.Uuid
+  roleId       String    @db.Uuid
+  permissionId String    @db.Uuid
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+
+  role         Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@map("role_permissions")
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model RoleAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  roleId    String    @db.Uuid
+  userId    String    @db.Uuid
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("role_assignments")
+  @@index([userId])
+  @@index([roleId])
+}
+
+model Invitation {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @db.Uuid
+  email        String    @db.VarChar(255)
+  role         String    @default("receptionist") @db.VarChar(64)
+  token        String    @unique @db.VarChar(255)
+  organisationId String? @db.Uuid
+  practiceId   String?   @db.Uuid
+  locationId   String?   @db.Uuid
+  expiresAt    DateTime?
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+
+  @@map("invitations")
+  @@index([tenantId])
+  @@index([token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tenantId  String    @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime  @db.Timestamptz()
+  usedAt    DateTime? @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  @@map("password_reset_tokens")
+  @@index([token])
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tenantId  String    @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  expiresAt DateTime? @db.Timestamptz()
+  usedAt    DateTime? @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  @@map("email_verification_tokens")
+  @@index([token])
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @db.VarChar(255)
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime? @db.Timestamptz()
+  lastAttemptAt  DateTime  @default(now()) @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+
+  @@map("login_attempts")
+  @@index([email])
+  @@index([lastAttemptAt])
+}

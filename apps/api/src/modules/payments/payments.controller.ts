@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PaymentsService } from './payments.service';
 import type { CreatePayment, UpdatePayment, CreatePaymentAllocation } from '@danta/schemas';
@@ -13,7 +13,7 @@ export class PaymentsController {
 
   @Get()
   @RequirePermissions('payment:process')
-  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number, @Query('take', new DefaultValuePipe(50), ParseIntPipe) take?: number) {
     return this.paymentsService.findAll(user.tenantId, patientId, skip, take);
   }
 

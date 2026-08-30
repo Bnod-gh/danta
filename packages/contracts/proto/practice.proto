@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package danta.practice;
+
+import "common.proto";
+
+service Practice {
+  rpc ResolveTenant (ResolveTenantRequest) returns (ResolveTenantResponse);
+  rpc GetPractice (GetPracticeRequest) returns (GetPracticeResponse);
+  rpc CheckEntitlement (CheckEntitlementRequest) returns (CheckEntitlementResponse);
+  rpc GetSettings (GetSettingsRequest) returns (GetSettingsResponse);
+  rpc UpsertSetting (UpsertSettingRequest) returns (UpsertSettingResponse);
+}
+
+message ResolveTenantRequest {
+  string tenantId = 1;
+}
+
+message ResolveTenantResponse {
+  Tenant tenant = 1;
+  bool found = 2;
+}
+
+message GetPracticeRequest {
+  string practiceId = 1;
+}
+
+message GetPracticeResponse {
+  Practice practice = 1;
+  bool found = 2;
+}
+
+message CheckEntitlementRequest {
+  string tenantId = 1;
+  string feature = 2;
+}
+
+message CheckEntitlementResponse {
+  bool entitled = 1;
+}
+
+message GetSettingsRequest {
+  string tenantId = 1;
+}
+
+message GetSettingsResponse {
+  repeated Setting settings = 1;
+}
+
+message UpsertSettingRequest {
+  string tenantId = 1;
+  string key = 2;
+  string valueJson = 3;
+  string userId = 4;
+}
+
+message UpsertSettingResponse {
+  Setting setting = 1;
+}
+
+message Tenant {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+
+message Practice {
+  string id = 1;
+  string tenantId = 2;
+  string name = 3;
+  string status = 4;
+}
+
+message Setting {
+  string id = 1;
+  string tenantId = 2;
+  string key = 3;
+  string valueJson = 4;
+}

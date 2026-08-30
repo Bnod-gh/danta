@@ -45,6 +45,31 @@ export class ImagingStudiesService {
     return study;
   }
 
+  async batchConditions(
+    tenantId: string,
+    params: { patientId: string; toothNumbers?: number[]; modality?: string },
+  ) {
+    const { patientId, toothNumbers, modality } = params;
+    const where: any = { tenantId };
+    if (toothNumbers && toothNumbers.length > 0) {
+      where.toothNumber = { in: toothNumbers };
+    }
+    if (modality) {
+      where.modality = modality;
+    }
+    const studies = await this.prisma.imagingStudy.findMany({
+      where: { ...where, patientId },
+      select: {
+        id: true,
+        modality: true,
+        studyDate: true,
+        status: true,
+      },
+      orderBy: { studyDate: 'desc' },
+    });
+    return studies;
+  }
+
   async create(tenantId: string, userId: string, data: CreateImagingStudy) {
     const patient = await this.prisma.patient.findFirst({ where: { id: data.patientId, tenantId } });
     if (!patient) throw new BadRequestException('Patient not found in tenant');

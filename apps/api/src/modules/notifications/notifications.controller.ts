@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { NotificationsService } from './notifications.service';
 import type { CreateNotification, NotificationQuery } from '@danta/schemas';
@@ -13,8 +13,14 @@ export class NotificationsController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: NotificationQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: NotificationQuery, @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number, @Query('take', new DefaultValuePipe(50), ParseIntPipe) take?: number) {
     return this.notificationsService.findAll(user.tenantId, query, skip, take);
+  }
+
+  @Get('unread-count')
+  @RequirePermissions('communication:read')
+  async getUnreadCount(@CurrentUser() user: AuthenticatedUser) {
+    return this.notificationsService.getUnreadCount(user.tenantId);
   }
 
   @Get(':id')

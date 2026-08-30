@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { MessagesService } from './messages.service';
 import type { CreateMessage, UpdateMessage, MessageQuery } from '@danta/schemas';
@@ -13,7 +13,7 @@ export class MessagesController {
 
   @Get()
   @RequirePermissions('communication:read')
-  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: MessageQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: MessageQuery, @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number, @Query('take', new DefaultValuePipe(50), ParseIntPipe) take?: number) {
     return this.messagesService.findAll(user.tenantId, query, skip, take);
   }
 

@@ -13,6 +13,7 @@ export const PatientContactSchema = z.object({
   email: z.string().optional(),
   relationship: z.string().optional(),
   isEmergency: z.boolean(),
+  isLegalGuardian: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -27,6 +28,7 @@ export const CreatePatientContactSchema = z.object({
   email: z.string().email().optional(),
   relationship: z.string().max(100).optional(),
   isEmergency: z.boolean().default(false),
+  isLegalGuardian: z.boolean().default(false),
 });
 
 export type CreatePatientContact = z.infer<typeof CreatePatientContactSchema>;

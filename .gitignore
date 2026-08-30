@@ -43,9 +43,23 @@ Thumbs.db
 # Docker
 docker/data
 
+# Storage (uploaded files)
+apps/api/storage/
+
 # Misc
 temp
+.tmp
 tmp
 project.md
 todo.md
+*.md
 .kilo/kilo.jsonc
+.husky
+.kilo
+.kilocode
+.playwright-mcp
+
+# Debug scripts
+check_pw.js
+check_pw2.js
+check_user.js

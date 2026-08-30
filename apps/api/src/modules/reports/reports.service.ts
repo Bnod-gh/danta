@@ -6,19 +6,22 @@ import { ReportQuery, ExportQuery, ClaimsAnalytics, PaymentAnalytics, TreatmentA
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private getDateFilter(query: ReportQuery) {
+  private getDateFilter(query: ReportQuery, dateField: string = 'createdAt') {
     const where: any = {};
-    if (query.startDate) where.gte = query.startDate;
-    if (query.endDate) where.lte = query.endDate;
+    if (query.startDate || query.endDate) {
+      where[dateField] = {};
+      if (query.startDate) where[dateField].gte = query.startDate;
+      if (query.endDate) where[dateField].lte = query.endDate;
+    }
     return where;
   }
 
-  private getSafeDateFilter(query: ReportQuery) {
-    const dateFilter = this.getDateFilter(query);
-    if (!dateFilter.gte) {
+  private getSafeDateFilter(query: ReportQuery, dateField: string = 'createdAt') {
+    const dateFilter = this.getDateFilter(query, dateField);
+    if (!query.startDate && !query.endDate) {
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-      dateFilter.gte = twoYearsAgo;
+      dateFilter[dateField] = { ...(dateFilter[dateField] || {}), gte: twoYearsAgo };
     }
     return dateFilter;
   }
@@ -30,12 +33,13 @@ export class ReportsService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const whereTenant = { tenantId };
-    const todayRange = { gte: today, lt: tomorrow };
+    const todayRange = { startTime: { gte: today, lt: tomorrow } };
+    const paymentTodayRange = { receivedAt: { gte: today, lt: tomorrow } };
 
     const [todayAppointments, todayPatients, todayRevenue, outstanding, activeRecalls, noShows, avgDurationMinutes] = await Promise.all([
       this.prisma.appointment.count({ where: { ...whereTenant, ...todayRange } }),
       this.prisma.appointment.findMany({ where: { ...whereTenant, ...todayRange }, select: { patientId: true }, distinct: ['patientId'] }).then(r => r.length),
-      this.prisma.payment.aggregate({ where: { ...whereTenant, ...todayRange, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
+      this.prisma.payment.aggregate({ where: { ...whereTenant, ...paymentTodayRange, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
       this.prisma.invoice.aggregate({ where: { ...whereTenant, status: { in: ['issued', 'partially_paid'] } }, _sum: { balance: true } }).then(r => r._sum.balance || 0),
       this.prisma.recall.count({ where: { ...whereTenant, status: { in: ['due', 'overdue'] } } }),
       this.prisma.appointment.count({ where: { ...whereTenant, ...todayRange, status: 'no_show' } }),
@@ -58,17 +62,18 @@ export class ReportsService {
   }
 
   async getRevenue(tenantId: string, _query: ReportQuery) {
-    const dateFilter = this.getDateFilter(_query);
-    const where = { tenantId, ...dateFilter };
+    const paymentDateFilter = this.getDateFilter(_query, 'receivedAt');
+    const refundDateFilter = this.getDateFilter(_query, 'createdAt');
+    const invoiceDateFilter = this.getDateFilter(_query, 'createdAt');
 
     const [totalInvoices, totalRevenue, totalRefunds, outstanding, byProvider, byService, daily] = await Promise.all([
-      this.prisma.invoice.count({ where: { ...where, status: { not: 'draft' } } }),
-      this.prisma.payment.aggregate({ where: { ...where, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
-      this.prisma.refund.aggregate({ where: { ...where, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
-      this.prisma.invoice.aggregate({ where: { tenantId, status: { in: ['issued', 'partially_paid'] }, ...dateFilter }, _sum: { balance: true } }).then(r => r._sum.balance || 0),
-      this.getRevenueByProvider(tenantId, dateFilter),
-      this.getRevenueByService(tenantId, dateFilter),
-      this.getRevenueDaily(tenantId, dateFilter),
+      this.prisma.invoice.count({ where: { tenantId, ...invoiceDateFilter, status: { not: 'draft' } } }),
+      this.prisma.payment.aggregate({ where: { tenantId, ...paymentDateFilter, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
+      this.prisma.refund.aggregate({ where: { tenantId, ...refundDateFilter, status: 'completed' }, _sum: { amount: true } }).then(r => r._sum.amount || 0),
+      this.prisma.invoice.aggregate({ where: { tenantId, status: { in: ['issued', 'partially_paid'] }, ...invoiceDateFilter }, _sum: { balance: true } }).then(r => r._sum.balance || 0),
+      this.getRevenueByProvider(tenantId, paymentDateFilter),
+      this.getRevenueByService(tenantId, invoiceDateFilter),
+      this.getRevenueDaily(tenantId, paymentDateFilter),
     ]);
 
     return {
@@ -143,7 +148,7 @@ export class ReportsService {
   }
 
   async getProduction(tenantId: string, query: ReportQuery) {
-    const dateFilter = this.getDateFilter(query);
+    const dateFilter = this.getDateFilter(query, 'date');
     const where = { tenantId, ...dateFilter };
 
     const [totalTreatments, totalProduction, byProvider, byTreatment, daily] = await Promise.all([
@@ -219,7 +224,7 @@ export class ReportsService {
   }
 
   async getCollections(tenantId: string, _query: ReportQuery) {
-    const dateFilter = this.getSafeDateFilter(_query);
+    const dateFilter = this.getSafeDateFilter(_query, 'createdAt');
     const where = { tenantId, ...dateFilter };
 
     const [invoices, paid, outstanding, overdue] = await Promise.all([
@@ -261,7 +266,7 @@ export class ReportsService {
   }
 
   async getAppointments(tenantId: string, _query: ReportQuery) {
-    const dateFilter = this.getDateFilter(_query);
+    const dateFilter = this.getDateFilter(_query, 'startTime');
     const where = { tenantId, ...dateFilter };
 
     const [total, completed, cancelled, noShows, avgDuration, byType, byProvider, daily] = await Promise.all([
@@ -444,7 +449,8 @@ export class ReportsService {
   }
 
   async getPatients(tenantId: string, _query: ReportQuery) {
-    const dateFilter = this.getSafeDateFilter(_query);
+    const patientDateFilter = this.getSafeDateFilter(_query, 'createdAt');
+    const appointmentDateFilter = this.getSafeDateFilter(_query, 'startTime');
     const [total, active, thisMonth, lastMonth] = await Promise.all([
       this.prisma.patient.count({ where: { tenantId } }),
       this.prisma.patient.count({ where: { tenantId, status: 'active' } }),
@@ -461,7 +467,7 @@ export class ReportsService {
     });
 
     const patients = await this.prisma.patient.findMany({
-      where: { tenantId, ...dateFilter },
+      where: { tenantId, ...patientDateFilter },
       select: { dateOfBirth: true },
       take: 10000,
     });
@@ -481,7 +487,7 @@ export class ReportsService {
     }
 
     const appointments = await this.prisma.appointment.findMany({
-      where: { tenantId, ...dateFilter },
+      where: { tenantId, ...appointmentDateFilter },
       select: { patientId: true },
       take: 50000,
     });
@@ -558,7 +564,7 @@ export class ReportsService {
   }
 
   async getPayments(tenantId: string, query: ReportQuery): Promise<PaymentAnalytics> {
-    const dateFilter = this.getDateFilter(query);
+    const dateFilter = this.getDateFilter(query, 'receivedAt');
     const where = { tenantId, ...dateFilter };
 
     const [totalPayments, totalAmount, payments] = await Promise.all([
@@ -596,7 +602,7 @@ export class ReportsService {
   }
 
   async getTreatmentAcceptance(tenantId: string, query: ReportQuery): Promise<TreatmentAcceptance> {
-    const dateFilter = this.getDateFilter(query);
+    const dateFilter = this.getDateFilter(query, 'createdAt');
     const where = { tenantId, ...dateFilter };
 
     const [totalPlans, acceptedPlans, byProvider, byMonth] = await Promise.all([
@@ -666,7 +672,7 @@ export class ReportsService {
   }
 
   async getChairUtilization(tenantId: string, query: ReportQuery): Promise<ChairUtilization> {
-    const dateFilter = this.getDateFilter(query);
+    const dateFilter = this.getDateFilter(query, 'startTime');
     const where = { tenantId, ...dateFilter };
 
     const [chairs, appointments] = await Promise.all([
@@ -728,7 +734,7 @@ export class ReportsService {
   }
 
   async getNoShows(tenantId: string, query: ReportQuery): Promise<NoShowAnalysis> {
-    const dateFilter = this.getDateFilter(query);
+    const dateFilter = this.getDateFilter(query, 'startTime');
     const where = { tenantId, ...dateFilter };
 
     const [totalAppointments, totalNoShows, appointments] = await Promise.all([

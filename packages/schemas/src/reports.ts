@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const ReportGroupBySchema = z.enum(['day', 'week', 'month']);
+export type ReportGroupBy = z.infer<typeof ReportGroupBySchema>;
+
+export const ReportExportFormatSchema = z.enum(['csv', 'pdf']);
+export type ReportExportFormat = z.infer<typeof ReportExportFormatSchema>;
+
 export const ReportDateRangeSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
@@ -22,7 +28,7 @@ export const ReportQuerySchema = z.object({
 export type ReportQuery = z.infer<typeof ReportQuerySchema>;
 
 export const ExportQuerySchema = z.object({
-  format: z.enum(['csv']).default('csv'),
+  format: z.enum(['csv', 'pdf']).default('csv'),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   providerId: z.string().uuid().optional(),
@@ -152,9 +158,19 @@ export const DashboardKpiSchema = z.object({
   todayAppointments: z.number().int().nonnegative(),
   todayPatients: z.number().int().nonnegative(),
   todayRevenue: z.number(),
+  yesterdayRevenue: z.number(),
+  revenueTrendPct: z.number(),
   outstandingBalance: z.number(),
   activeRecalls: z.number().int().nonnegative(),
   noShowsToday: z.number().int().nonnegative(),
+  averageDuration: z.number().int().nonnegative(),
+  confirmedAppointments: z.number().int().nonnegative(),
+  inProgressAppointments: z.number().int().nonnegative(),
+  totalChairs: z.number().int().nonnegative(),
+  chairsActive: z.number().int().nonnegative(),
+  utilizationRate: z.number(),
+  productionToday: z.number(),
+  productionTarget: z.number().nullable(),
 });
 
 export type DashboardKpi = z.infer<typeof DashboardKpiSchema>;

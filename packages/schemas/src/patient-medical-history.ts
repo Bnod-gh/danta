@@ -7,6 +7,9 @@ export const PatientMedicalHistorySchema = z.object({
   condition: z.string(),
   notes: z.string().optional(),
   diagnosedAt: z.date().optional(),
+  isControlled: z.boolean(),
+  isCritical: z.boolean(),
+  medications: z.string().optional(),
   isActive: z.boolean(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -18,6 +21,9 @@ export const CreatePatientMedicalHistorySchema = z.object({
   condition: z.string().min(1).max(255),
   notes: z.string().max(1000).optional(),
   diagnosedAt: z.coerce.date().optional(),
+  isControlled: z.boolean().default(true),
+  isCritical: z.boolean().default(false),
+  medications: z.string().max(500).optional(),
   isActive: z.boolean().default(true),
 });
 

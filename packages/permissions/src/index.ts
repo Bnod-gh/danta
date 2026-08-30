@@ -1,4 +1,5 @@
 export const ROLES = {
+  superadmin: 'superadmin',
   platform_owner: 'platform_owner',
   platform_admin: 'platform_admin',
   organisation_owner: 'organisation_owner',
@@ -31,7 +32,7 @@ export const PERMISSIONS = {
   settings: ['manage'],
   users: ['manage'],
   audit: ['read'],
-  calendar: ['read', 'create', 'update', 'delete'],
+  schedule: ['read', 'create', 'update', 'delete'],
   service: ['read', 'create', 'update', 'delete'],
   fee: ['read', 'create', 'update', 'delete'],
   invoice: ['read', 'create', 'update', 'delete'],
@@ -50,6 +51,9 @@ export type Permission = {
 };
 
 export const DEFAULT_PERMISSIONS: Record<RoleValue, Permission[]> = {
+  superadmin: Object.keys(PERMISSIONS).flatMap((resource) =>
+    PERMISSIONS[resource as keyof typeof PERMISSIONS].map((action) => ({ resource, action })),
+  ),
   platform_owner: Object.keys(PERMISSIONS).flatMap((resource) =>
     PERMISSIONS[resource as keyof typeof PERMISSIONS].map((action) => ({ resource, action })),
   ),

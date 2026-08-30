@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+﻿import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export interface AuthenticatedUser {
   id: string;
@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
   status: string;
   firstName?: string;
   lastName?: string;
+  permissions?: string[];
 }
 
 export interface ApiKeyAuthenticatedUser {

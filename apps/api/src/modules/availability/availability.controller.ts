@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AvailabilityService } from './availability.service';
-import type { CreateAvailability, UpdateAvailability } from '@danta/schemas';
+import type { CreateAvailability, UpdateAvailability } from './availability.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';

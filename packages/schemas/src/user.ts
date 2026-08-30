@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PaginationSchema, PaginatedResponseSchema } from './common';
 
 export const UserRoleSchema = z.enum([
+  'superadmin',
   'platform_owner',
   'platform_admin',
   'organisation_owner',

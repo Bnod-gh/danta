@@ -4,6 +4,7 @@ export const ServiceSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
   name: z.string(),
+  code: z.string().optional(),
   description: z.string().optional(),
   category: z.string().optional(),
   isActive: z.boolean(),
@@ -15,6 +16,7 @@ export type Service = z.infer<typeof ServiceSchema>;
 
 export const CreateServiceSchema = z.object({
   name: z.string().min(1).max(255),
+  code: z.string().max(32).optional(),
   description: z.string().max(500).optional(),
   category: z.string().max(100).optional(),
 });

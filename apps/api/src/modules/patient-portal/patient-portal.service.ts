@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { PatientRegister, PatientPortalToken } from '@danta/schemas';
+import { PatientRegister, PatientPortalToken, PatientPortalProfileUpdate } from '@danta/schemas';
 import { ConfigService } from '@nestjs/config';
 
 export interface PatientJwtPayload {
@@ -86,18 +86,75 @@ export class PatientPortalService {
   }
 
   async register(data: PatientRegister) {
-    const passwordHash = await bcrypt.hash(data.password, 12);
-    const patientNumber = `P${Date.now().toString().slice(-8)}`;
-    const patient = await this.prisma.patient.create({
+    const { tenantId, email, phone, password, dateOfBirth } = data;
+
+    if (!tenantId) {
+      throw new Error('Tenant ID is required');
+    }
+
+    const tenant = await this.prisma.organisation.findUnique({ where: { id: tenantId } });
+    if (!tenant || tenant.status !== 'active') {
+      throw new Error('Invalid or inactive tenant');
+    }
+
+    const identifier = email || phone;
+    if (!identifier) {
+      throw new Error('Email or phone is required');
+    }
+
+    const existing = await this.prisma.patient.findFirst({
+      where: {
+        tenantId,
+        OR: [{ email }, { phone }],
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        dateOfBirth: true,
+        passwordHash: true,
+      },
+    });
+
+    if (!existing) {
+      throw new Error('Patient record not found. Please contact your practice to set up your account.');
+    }
+
+    if (existing.status !== 'active') {
+      throw new Error('Patient account is not active');
+    }
+
+    if (existing.passwordHash) {
+      throw new Error('Patient account already has a password. Use login instead.');
+    }
+
+    if (existing.dateOfBirth && existing.dateOfBirth.toISOString().split('T')[0] !== new Date(dateOfBirth).toISOString().split('T')[0]) {
+      throw new Error('Date of birth verification failed');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const patient = await this.prisma.patient.update({
+      where: { id: existing.id },
       data: {
-        tenantId: data.tenantId,
-        patientNumber,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        dateOfBirth: data.dateOfBirth,
-        email: data.email,
-        phone: data.phone,
         passwordHash,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        dateOfBirth: existing.dateOfBirth,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        patientNumber: true,
+        firstName: true,
+        lastName: true,
+        preferredName: true,
+        email: true,
+        phone: true,
       },
     });
 
@@ -122,6 +179,7 @@ export class PatientPortalService {
       resourceType: 'patient',
       resourceId: patient.id,
       result: 'success',
+      metadata: { method: identifier },
     });
 
     return {
@@ -294,4 +352,16 @@ export class PatientPortalService {
     });
     return forms;
   }
+
+  async updatePatientProfile(patientId: string, tenantId: string, data: PatientPortalProfileUpdate) {
+    const existing = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId } });
+    if (!existing) throw new Error('Patient not found');
+    const protectedFields = ['tenantId', 'status', 'passwordHash'];
+    const rawData = data as Record<string, unknown>;
+    for (const field of protectedFields) {
+      if (field in rawData) throw new Error(`Cannot update protected field: ${field}`);
+    }
+    return this.prisma.patient.update({ where: { id: patientId }, data });
+  }
+
 }

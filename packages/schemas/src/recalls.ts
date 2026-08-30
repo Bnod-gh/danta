@@ -2,7 +2,19 @@ import { z } from 'zod';
 
 export const RecallTypeSchema = z.enum(['examination', 'hygiene', 'periodontal', 'xray', 'treatment_followup', 'custom']);
 
-export const RecallStatusSchema = z.enum(['due', 'overdue', 'booked', 'completed', 'failed', 'cancelled']);
+export type RecallType = z.infer<typeof RecallTypeSchema>;
+
+export const RECALL_CHANNEL_SCHEMA = z.enum(['sms', 'email', 'both']);
+
+export const UpdateRecallConfigSchema = z.object({
+  intervalDays: z.number().int().min(1).max(1825).optional(),
+  channel: RECALL_CHANNEL_SCHEMA.optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateRecallConfig = z.infer<typeof UpdateRecallConfigSchema>;
+
+export const RecallStatusSchema = z.enum(['due', 'overdue', 'booked', 'completed', 'failed', 'cancelled', 'pending']);
 
 export const RecallSchema = z.object({
   id: z.string().uuid(),

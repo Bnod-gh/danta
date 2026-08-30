@@ -93,4 +93,22 @@ export class CommunicationDispatchService {
       return false;
     }
   }
+  async sendMessage(tenantId: string, _userId: string, body: { channel: string; recipient: string; subject?: string; body: string; metadata?: Record<string, unknown> }) {
+    const message = await this.prisma.message.create({ data: { tenantId, _userId, channel: body.channel, recipient: body.recipient, subject: body.subject, body: body.body, status: 'pending', metadata: body.metadata } as any });
+    return this.dispatchMessage(message.id);
+  }
+
+  async getDeliveryStatus(tenantId: string, messageId: string) {
+    const message = await this.prisma.message.findFirst({ where: { id: messageId, tenantId } });
+    if (!message) throw new NotFoundException('Message not found');
+    return { id: message.id, status: message.status, provider: message.provider, error: message.error };
+  }
+
+  async retryFailedMessage(tenantId: string, _userId: string, messageId: string) {
+    const message = await this.prisma.message.findFirst({ where: { id: messageId, tenantId } });
+    if (!message) throw new NotFoundException('Message not found');
+    await this.prisma.message.update({ where: { id: messageId }, data: { status: 'pending', error: null } });
+    return this.dispatchMessage(messageId);
+  }
+
 }

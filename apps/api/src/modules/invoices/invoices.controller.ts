@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { InvoicesService } from './invoices.service';
 import type { CreateInvoice, UpdateInvoice, CreateInvoiceItem, UpdateInvoiceItem } from '@danta/schemas';
@@ -13,7 +13,7 @@ export class InvoicesController {
 
   @Get()
   @RequirePermissions('billing:read')
-  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('status') status?: string, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query('patientId') patientId?: string, @Query('status') status?: string, @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number, @Query('take', new DefaultValuePipe(50), ParseIntPipe) take?: number) {
     return this.invoicesService.findAll(user.tenantId, patientId, status, skip, take);
   }
 

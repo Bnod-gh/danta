@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -22,6 +22,7 @@ import { PatientAlertsModule } from './modules/patient-alerts/patient-alerts.mod
 import { PatientConsentModule } from './modules/patient-consent/patient-consent.module';
 import { PatientDocumentsModule } from './modules/patient-documents/patient-documents.module';
 import { PatientFormsModule } from './modules/patient-forms/patient-forms.module';
+import { PatientClinicalModule } from './modules/patient-clinical/patient-clinical.module';
 import { AppointmentTypesModule } from './modules/appointment-types/appointment-types.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { ChairsModule } from './modules/chairs/chairs.module';
@@ -53,7 +54,8 @@ import { RecallsModule } from './modules/recalls/recalls.module';
 import { AppointmentRemindersModule } from './modules/appointment-reminders/appointment-reminders.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { PatientPortalModule } from './modules/patient-portal/patient-portal.module';
-import { PermissionsGuard } from './common/guards/permissions.guard';
+import { ImagingTwainModule } from './modules/imaging-twain/imaging-twain.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -79,6 +81,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     PatientConsentModule,
     PatientDocumentsModule,
     PatientFormsModule,
+    PatientClinicalModule,
     AppointmentTypesModule,
     ProvidersModule,
     ChairsModule,
@@ -93,6 +96,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     PeriodontalRecordsModule,
     ImagingStudiesModule,
     ImagingImagesModule,
+    ImagingTwainModule,
     ImagingIntegrationsModule,
     ClaimIntegrationsModule,
     ServicesModule,
@@ -110,16 +114,14 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     AppointmentRemindersModule,
     ReportsModule,
     PatientPortalModule,
+    StorageModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: PermissionsGuard,
-    },
+    // HttpExceptionFilter is registered via app.useGlobalFilters() in main.ts
   ],
 })
 export class AppModule {}

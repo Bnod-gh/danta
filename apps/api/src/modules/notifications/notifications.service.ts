@@ -33,7 +33,17 @@ export class NotificationsService {
     return { data: notifications, total, skip: skip ?? 0, take: take ?? 20 };
   }
 
+  async getUnreadCount(tenantId: string) {
+    const count = await this.prisma.notification.count({
+      where: { tenantId, readAt: null },
+    });
+    return { count };
+  }
+
   async findOne(tenantId: string, id: string) {
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)) {
+      throw new NotFoundException('Notification not found');
+    }
     const notification = await this.prisma.notification.findFirst({
       where: { id, tenantId },
     });

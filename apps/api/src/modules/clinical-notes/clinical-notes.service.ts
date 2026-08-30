@@ -99,4 +99,9 @@ export class ClinicalNotesService {
 
     return { deleted: true };
   }
+
+  async synthesizeSoap(tenantId: string, userId: string, input: { patientId: string; chiefComplaint?: string; rawDictation?: string; subjective?: string; objective?: string; assessment?: string; plan?: string }) {
+    return this.prisma.clinicalNote.create({ data: { tenantId, userId: userId ?? null, patientId: input.patientId, note: input.chiefComplaint ?? input.subjective ?? '', type: 'soap' } as any });
+  }
+
 }

@@ -1,14 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreatePatient, UpdatePatient, PatientQuery } from '@danta/schemas';
+import { Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class PatientsService {
   constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
 
   async findAll(tenantId: string, query: PatientQuery, skip?: number, take?: number) {
-    const where: any = { tenantId };
+    const where: Prisma.PatientWhereInput = { tenantId };
     if (query.search) {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },
@@ -54,14 +56,58 @@ export class PatientsService {
     });
   }
 
+  async getWorkspace(tenantId: string, id: string) {
+    const patient = await this.prisma.patient.findFirst({
+      where: { id, tenantId },
+      include: {
+        addresses: true,
+        contacts: true,
+        medicalHistory: { orderBy: { createdAt: 'desc' }, take: 10 },
+        patient_medical_context: true,
+        patient_legal_guardians: true,
+        patient_relationships_patient_relationships_patientIdTopatients: { orderBy: { createdAt: 'desc' }, take: 10 },
+        patient_surgical_history: { orderBy: { surgeryDate: 'desc' }, take: 10 },
+        allergies: { orderBy: { createdAt: 'desc' }, take: 20 },
+        medications: { orderBy: { createdAt: 'desc' }, take: 20 },
+        alerts: { where: { isActive: true }, orderBy: { createdAt: 'desc' }, take: 20 },
+        consents: { orderBy: { createdAt: 'desc' }, take: 20 },
+        documents: { orderBy: { createdAt: 'desc' }, take: 20 },
+        appointments: {
+          orderBy: { startTime: 'desc' },
+          take: 10,
+          include: { appointmentType: { select: { name: true } }, provider: { select: { firstName: true, lastName: true } }, chair: { select: { name: true } } },
+        },
+        clinicalNotes: { orderBy: { createdAt: 'desc' }, take: 15 },
+        dentalCharts: {
+          orderBy: { chartDate: 'desc' },
+          take: 5,
+          include: { conditions: true },
+        },
+        treatmentHistory: { orderBy: { date: 'desc' }, take: 15 },
+        treatmentPlans: { orderBy: { createdAt: 'desc' }, take: 5 },
+        periodontalRecords: { orderBy: { chartDate: 'desc' }, take: 5 },
+        imagingStudies: {
+          orderBy: { studyDate: 'desc' },
+          take: 5,
+          include: { images: true },
+        },
+        forms: { orderBy: { createdAt: 'desc' }, take: 10 },
+        invoices: { orderBy: { createdAt: 'desc' }, take: 10 },
+        payments: { orderBy: { createdAt: 'desc' }, take: 10 },
+      },
+    });
+    if (!patient) throw new NotFoundException('Patient not found');
+    return patient;
+  }
+
   async create(tenantId: string, userId: string, data: CreatePatient) {
-    const patientNumber = `P${Date.now().toString().slice(-8)}`;
+    const patientNumber = `P${randomBytes(4).toString('hex').toUpperCase()}`;
     const patient = await this.prisma.patient.create({
       data: {
+        ...data,
         tenantId,
         patientNumber,
-        ...data,
-      },
+      } as Prisma.PatientCreateInput,
     });
 
     await this.auditService.log({
@@ -77,13 +123,16 @@ export class PatientsService {
   }
 
   async update(tenantId: string, userId: string, id: string, data: UpdatePatient) {
-    const existing = await this.findOne(tenantId, id);
-    if (!existing) throw new NotFoundException('Patient not found');
-
-    const patient = await this.prisma.patient.update({
-      where: { id: existing.id },
-      data,
+    const result = await this.prisma.patient.updateMany({
+      where: { id, tenantId },
+      data: data as Prisma.PatientUpdateManyMutationInput,
     });
+    
+    if (result.count === 0) {
+      throw new NotFoundException('Patient not found');
+    }
+
+    const patient = await this.findOne(tenantId, id);
 
     await this.auditService.log({
       tenantId,
@@ -98,20 +147,40 @@ export class PatientsService {
   }
 
   async remove(tenantId: string, userId: string, id: string) {
-    const existing = await this.findOne(tenantId, id);
-    if (!existing) throw new NotFoundException('Patient not found');
+    const result = await this.prisma.patient.deleteMany({ 
+      where: { id, tenantId } 
+    });
 
-    await this.prisma.patient.delete({ where: { id: existing.id } });
+    if (result.count === 0) {
+      throw new NotFoundException('Patient not found');
+    }
 
     await this.auditService.log({
       tenantId,
       userId,
       action: 'patient.delete',
       resourceType: 'patient',
-      resourceId: existing.id,
+      resourceId: id,
       result: 'success',
     });
 
     return { deleted: true };
+  }
+
+  async getImaging(tenantId: string, patientId: string) {
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: patientId, tenantId },
+    });
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const studies = await this.prisma.imagingStudy.findMany({
+      where: { tenantId, patientId },
+      include: {
+        provider: { select: { id: true, firstName: true, lastName: true } },
+        images: true,
+      },
+      orderBy: { studyDate: 'desc' },
+    });
+    return studies;
   }
 }

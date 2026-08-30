@@ -1,16 +1,23 @@
 import { Worker } from 'bullmq';
-import Redis from 'ioredis';
-import { env } from '@danta/config';
+import { createRedisConnection } from './redis';
 import prisma from '@danta/database';
 import { LoginAttemptCleanupService } from './services/login-attempt-cleanup.service';
-import { SmtpEmailProvider } from './providers/smtp-email.provider';
-import { MockSmsProvider } from './providers/mock-sms.provider';
+import { getEmailProvider, getSmsProvider } from './providers/sms.factory';
 import { EmailMessage, SmsMessage } from './providers/communication-provider.interface';
+import { createEmailWorker } from './queues/email.queue';
+import { createSmsWorker } from './queues/sms.queue';
+import { createRemindersWorker } from './queues/reminders.queue';
+import { createReportsWorker } from './queues/reports.queue';
+import { createImagingWorker } from './queues/imaging.queue';
+import { createRecallsWorker, startRecallScheduler } from './queues/recalls.queue';
 import cron from 'node-cron';
+import { findCompatibleEntries, type WaitlistEntryLike } from '@danta/database';
 
-const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
-const emailProvider = new SmtpEmailProvider();
-const smsProvider = new MockSmsProvider();
+const connection = createRedisConnection();
+const emailProvider = getEmailProvider();
+const smsProvider = getSmsProvider();
+
+const workers: Worker[] = [];
 
 async function dispatchMessage(messageId: string): Promise<boolean> {
   const message = await prisma.message.findFirst({
@@ -95,6 +102,60 @@ async function dispatchMessage(messageId: string): Promise<boolean> {
   }
 }
 
+async function matchWaitlist(tenantId: string, appointmentId: string): Promise<boolean> {
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, tenantId },
+    select: {
+      id: true, patientId: true, providerId: true, chairId: true,
+      appointmentTypeId: true, startTime: true, endTime: true, status: true,
+    },
+  });
+  if (!appointment || appointment.status !== 'cancelled') return false;
+
+  const entries = await prisma.waitlist.findMany({
+    where: { tenantId, status: 'waiting' },
+  });
+
+  const matches = findCompatibleEntries(
+    {
+      providerId: appointment.providerId,
+      chairId: appointment.chairId,
+      appointmentTypeId: appointment.appointmentTypeId || null,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+    },
+    entries,
+  );
+
+  for (const match of matches) {
+    await prisma.notification.create({
+      data: {
+        tenantId,
+        patientId: match.patientId,
+        type: 'system',
+        title: 'Earlier slot available',
+        message: `A cancellation freed a slot that fits a waitlist entry (preferred ${match.preferredStartTime.toLocaleString('en-AU')} – ${match.preferredEndTime.toLocaleString('en-AU')}). Contact the patient to offer the time.`,
+        data: { waitlistEntryId: match.id, freedAppointmentId: appointmentId, suggestedStart: appointment.startTime.toISOString(), suggestedEnd: appointment.endTime.toISOString() },
+      },
+    });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      tenantId,
+      userId: null as unknown as string,
+      action: 'waitlist.match_found',
+      resourceType: 'waitlist',
+      resourceId: appointmentId,
+      result: 'success',
+      metadata: { matchedCount: matches.length, matchedEntryIds: matches.map((m: WaitlistEntryLike) => m.id) },
+    } as never,
+  }).catch(() => undefined);
+
+  console.log(`Waitlist matcher: ${matches.length} compatible entr${matches.length === 1 ? 'y' : 'ies'} for cancelled appointment ${appointmentId}`);
+  return matches.length > 0;
+}
+
 async function main() {
   const cleanupService = new LoginAttemptCleanupService();
 
@@ -104,6 +165,12 @@ async function main() {
     if (job.name === 'dispatch:message') {
       const messageId = job.data.messageId as string;
       return await dispatchMessage(messageId);
+    }
+
+    if (job.name === 'match-waitlist') {
+      const tenantId = job.data.tenantId as string;
+      const appointmentId = job.data.appointmentId as string;
+      return await matchWaitlist(tenantId, appointmentId);
     }
 
     console.log(`Unknown job type: ${job.name}`);
@@ -118,6 +185,15 @@ async function main() {
     console.error(`Job ${job?.id} failed:`, err);
   });
 
+  workers.push(worker);
+  workers.push(createEmailWorker());
+  workers.push(createSmsWorker());
+  workers.push(createRemindersWorker());
+  workers.push(createReportsWorker());
+  workers.push(createImagingWorker());
+  workers.push(createRecallsWorker());
+  startRecallScheduler();
+
   cron.schedule('0 2 * * *', async () => {
     try {
       await cleanupService.cleanupExpiredLoginAttempts();
@@ -126,12 +202,16 @@ async function main() {
     }
   });
 
-  process.on('SIGINT', async () => {
-    await worker.close();
+  const shutdown = async (signal: string) => {
+    console.log(`${signal} received, closing workers...`);
+    await Promise.all(workers.map(w => w.close()));
     await connection.quit();
     await prisma.$disconnect();
     process.exit(0);
-  });
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 main().catch((error) => {

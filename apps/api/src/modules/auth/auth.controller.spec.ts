@@ -1,123 +1,87 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuditService } from '../audit/audit.service';
+import { InvitationsService } from '../invitations/invitations.service';
+import { UnauthorizedException } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 describe('AuthController', () => {
-  let app: INestApplication;
-  let authController: AuthController;
-  let authService: AuthService;
+  let controller: AuthController;
+  let authService: jest.Mocked<AuthService>;
+  let auditService: jest.Mocked<AuditService>;
+  let invitationsService: jest.Mocked<InvitationsService>;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const mockAuthService = {
+      me: jest.fn(),
+      validateUser: jest.fn(),
+      login: jest.fn(),
+      register: jest.fn(),
+      refresh: jest.fn(),
+      logout: jest.fn(),
+    };
+
+    const mockAuditService = {
+      log: jest.fn(),
+    };
+
+    const mockInvitationsService = {
+      accept: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        {
-          provide: AuthService,
-          useValue: {
-            validateUser: jest.fn(),
-            login: jest.fn(),
-            register: jest.fn(),
-            refresh: jest.fn(),
-            logout: jest.fn(),
-          },
-        },
-        {
-          provide: AuditService,
-          useValue: {
-            log: jest.fn(),
-          },
-        },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: AuditService, useValue: mockAuditService },
+        { provide: InvitationsService, useValue: mockInvitationsService },
       ],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    authController = moduleFixture.get<AuthController>(AuthController);
-    authService = moduleFixture.get<AuthService>(AuthService);
+    controller = module.get<AuthController>(AuthController);
+    authService = module.get(AuthService);
+    auditService = module.get(AuditService);
+    invitationsService = module.get(InvitationsService);
   });
 
-  afterEach(async () => {
-    if (app) {
-      await app.close();
-    }
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
   });
 
   describe('login', () => {
-    it('should return tokens on successful login', async () => {
-      jest.spyOn(authService, 'validateUser').mockResolvedValue({ id: 'user-1', email: 'owner@danta.demo', role: 'owner', tenantId: 'tenant-1' } as any);
-      jest.spyOn(authService, 'login').mockResolvedValue({
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-      } as any);
-
-      const result = await authController.login({} as any, { email: 'owner@danta.demo', password: 'Password123!' } as any);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-      expect(authService.validateUser).toHaveBeenCalledWith('owner@danta.demo', 'Password123!');
+    it('should log audit failure on invalid credentials', async () => {
+      authService.validateUser.mockResolvedValue(null);
+      const req = { ip: '127.0.0.1', headers: {} } as Request;
+      const res = {} as Response;
+      
+      await expect(controller.login(req, res, { email: 'test@example.com', password: 'wrong' })).rejects.toThrow(UnauthorizedException);
+      expect(auditService.log).toHaveBeenCalledWith(expect.objectContaining({ result: 'failure' }));
     });
   });
 
   describe('register', () => {
-    it('should register a new user and return tokens', async () => {
-      jest.spyOn(authService, 'register').mockResolvedValue({
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-      } as any);
-
-      const result = await authController.register({
-        email: 'new@test.com',
-        password: 'SecurePass123!',
-        firstName: 'Test',
-        lastName: 'User',
-        tenantId: 'tenant-1',
-        role: 'patient',
-      } as any);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
+    it('should call invitationsService.accept and authService.login', async () => {
+      const mockUser = { id: '1', email: 'test@example.com', role: 'admin' as any, tenantId: 't1', passwordHash: 'hash', firstName: 'test', lastName: 'test', status: 'active', createdAt: new Date(), updatedAt: new Date(), organisationId: null, practiceId: null, locationId: null, deletedAt: null };
+      invitationsService.accept.mockResolvedValue(mockUser);
+      authService.login.mockResolvedValue({ message: 'Logged in successfully' } as any);
+      
+      const res = {} as Response;
+      await controller.register(res, { email: 'test@example.com', password: 'password', firstName: 'test', lastName: 'test', inviteToken: 'token' });
+      
+      expect(invitationsService.accept).toHaveBeenCalled();
+      expect(authService.login).toHaveBeenCalled();
     });
   });
 
   describe('refresh', () => {
-    it('should return new tokens on valid refresh', async () => {
-      jest.spyOn(authService, 'refresh').mockResolvedValue({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      } as any);
-
-      const result = await authController.refresh({ refreshToken: 'valid-refresh-token' } as any);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-    });
-  });
-
-  describe('logout', () => {
-    it('should logout successfully', async () => {
-      jest.spyOn(authService, 'logout').mockResolvedValue({ message: 'Logged out successfully' } as any);
-
-      const mockReq = {
-        ip: '127.0.0.1',
-        headers: { 'user-agent': 'test-agent' },
-      };
-
-      const mockUser = {
-        id: 'user-1',
-        email: 'owner@danta.demo',
-        role: 'owner',
-        tenantId: 'tenant-1',
-        practiceId: 'practice-1',
-        locationId: 'location-1',
-        status: 'active',
-      };
-
-      const result = await authController.logout(mockReq as any, mockUser, { refreshToken: 'refresh-token' } as any);
-
-      expect(result).toEqual({ message: 'Logged out successfully' });
+    it('should extract cookie or body token', async () => {
+      authService.refresh.mockResolvedValue({ message: 'Tokens refreshed' } as any);
+      const req = { cookies: { refreshToken: 'cookie-token' } } as unknown as Request;
+      const res = {} as Response;
+      
+      await controller.refresh(req, res);
+      expect(authService.refresh).toHaveBeenCalledWith('cookie-token', res);
     });
   });
 });

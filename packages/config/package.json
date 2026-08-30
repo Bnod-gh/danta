@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest"
   },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "eslint": "^9.17.0",

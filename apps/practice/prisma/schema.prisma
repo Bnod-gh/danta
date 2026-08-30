@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl  = env("DATABASE_DIRECT_URL")
+}
+
+model Organisation {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  legalName   String?   @db.VarChar(255)
+  abn         String?   @db.VarChar(20)
+  status      String    @default("pending") @db.VarChar(32)
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  practices   Practice[]
+  users       User[]
+  invitations Invitation[]
+
+  @@map("organisations")
+  @@index([name])
+}
+
+model Practice {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @db.Uuid
+  organisationId String    @db.Uuid
+  name           String    @db.VarChar(255)
+  status         String    @default("pending") @db.VarChar(32)
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
+
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  locations      Location[]
+
+  @@map("practices")
+  @@index([tenantId, organisationId])
+}
+
+model Location {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @db.Uuid
+  practiceId     String    @db.Uuid
+  name           String    @db.VarChar(255)
+  address        String?
+  phone          String?
+  timezone       String    @default("Australia/Adelaide") @db.VarChar(64)
+  status         String    @default("pending") @db.VarChar(32)
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
+
+  practice       Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+
+  @@map("locations")
+  @@index([tenantId, practiceId])
+}
+
+model TenantSetting {
+  id        String    @id @default(uuid()) @db.Uuid
+  tenantId  String    @db.Uuid
+  key       String    @db.VarChar(255)
+  value     Json
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @db.Timestamptz()
+
+  @@map("tenant_settings")
+  @@index([tenantId, key], type: "Hash")
+}
+
+model SubscriptionPlan {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?   @db.VarChar(1000)
+  price       Decimal   @db.Decimal(10, 2)
+  currency    String    @default("AUD") @db.VarChar(3)
+  interval    String    @db.VarChar(32)
+  features    Json
+  limits      Json
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+  @@index([isActive])
+}
+
+model Subscription {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @db.Uuid
+  planId            String           @db.Uuid
+  status            String           @default("active") @db.VarChar(32)
+  currentPeriodStart DateTime        @db.Timestamptz()
+  currentPeriodEnd   DateTime        @db.Timestamptz()
+  trialEndsAt       DateTime?        @db.Timestamptz()
+  cancelledAt       DateTime?        @db.Timestamptz()
+  createdAt         DateTime         @default(now()) @db.Timestamptz()
+  updatedAt         DateTime         @updatedAt @db.Timestamptz()
+
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+  usageRecords      UsageRecord[]
+
+  @@unique([tenantId], map: "unique_tenant_subscription")
+  @@map("subscriptions")
+  @@index([tenantId, status])
+}
+
+model UsageRecord {
+  id             String    @id @default(uuid()) @db.Uuid
+  subscriptionId String    @db.Uuid
+  tenantId       String    @db.Uuid
+  metric         String    @db.VarChar(100)
+  amount         Decimal   @db.Decimal(12, 2)
+  recordedAt     DateTime  @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("usage_records")
+  @@index([tenantId, metric])
+  @@index([subscriptionId])
+}

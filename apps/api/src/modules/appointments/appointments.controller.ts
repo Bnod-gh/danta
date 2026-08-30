@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { AppointmentsService } from './appointments.service';
 import type { CreateAppointment, UpdateAppointment, AppointmentQuery } from '@danta/schemas';
@@ -13,7 +13,7 @@ export class AppointmentsController {
 
   @Get()
   @RequirePermissions('calendar:read')
-  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: AppointmentQuery, @Query('skip', ParseIntPipe) skip?: number, @Query('take', ParseIntPipe) take?: number) {
+  async findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: AppointmentQuery, @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number, @Query('take', new DefaultValuePipe(50), ParseIntPipe) take?: number) {
     return this.appointmentsService.findAll(user.tenantId, query, skip, take);
   }
 
@@ -21,6 +21,12 @@ export class AppointmentsController {
   @RequirePermissions('calendar:read')
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentsService.findOne(user.tenantId, id);
+  }
+
+  @Get('schedule/day')
+  @RequirePermissions('calendar:read')
+  async getDaySchedule(@CurrentUser() user: AuthenticatedUser, @Query('date') date: string) {
+    return this.appointmentsService.getDaySchedule(user.tenantId, date);
   }
 
   @Post()

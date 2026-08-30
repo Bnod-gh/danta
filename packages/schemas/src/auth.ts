@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { UserRoleSchema } from './user';
 
 export const LoginSchema = z.object({
   email: z.string().email(),
@@ -13,8 +12,6 @@ export const RegisterSchema = z.object({
   password: z.string().min(12).max(128),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  tenantId: z.string().uuid(),
-  role: UserRoleSchema.default('receptionist'),
 });
 
 export type Register = z.infer<typeof RegisterSchema>;

@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, Req, UseGuards, Patch } from '@nestjs/common';
 import { Request } from 'express';
 import { PatientPortalService } from './patient-portal.service';
-import type { PatientLogin, PatientRegister } from '@danta/schemas';
+import type { PatientLogin, PatientRegister, PatientPortalProfileUpdate } from '@danta/schemas';
 import { PatientJwtAuthGuard } from './guards/patient-jwt-auth.guard';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -94,5 +94,12 @@ export class PatientPortalController {
   async getForms(@Req() req: PatientRequest) {
     const patient = req.patient;
     return this.patientPortalService.getMyForms(patient.id, patient.tenantId);
+  }
+
+  @Patch('profile')
+  @UseGuards(PatientJwtAuthGuard)
+  async updateProfile(@Req() req: PatientRequest, @Body() body: PatientPortalProfileUpdate) {
+    const patient = req.patient;
+    return this.patientPortalService.updatePatientProfile(patient.id, patient.tenantId, body);
   }
 }

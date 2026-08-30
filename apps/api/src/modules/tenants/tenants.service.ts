@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -36,5 +36,32 @@ export class TenantsService {
       result: 'success',
     });
     return tenant;
+  }
+
+  async findPending(platformTenantId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!user || (user.role !== 'platform_owner' && user.role !== 'platform_admin')) {
+      throw new ForbiddenException('Platform administrator access required');
+    }
+    const tenants = await this.prisma.organisation.findMany({
+      where: { status: 'pending' },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+    await this.auditService.log({
+      tenantId: platformTenantId,
+      userId,
+      action: 'tenant.pending_list',
+      resourceType: 'organisation',
+      result: 'success',
+    });
+    return tenants;
   }
 }

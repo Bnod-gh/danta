@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { createHash } from 'node:crypto';
+
+/** Returns the SHA-256 hex digest of a refresh token for safe DB storage. */
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 @Injectable()
 export class UsersService {
@@ -50,19 +56,20 @@ export class UsersService {
     return user;
   }
 
-  async createSession(userId: string, refreshToken: string) {
+  async createSession(userId: string, rawRefreshToken: string) {
     return this.prisma.userSession.create({
       data: {
         userId,
-        refreshToken,
+        // Store only the hash — the raw token is only ever in memory/cookies
+        refreshToken: hashToken(rawRefreshToken),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
   }
 
-  async findSessionByRefreshToken(refreshToken: string) {
+  async findSessionByRefreshToken(rawRefreshToken: string) {
     return this.prisma.userSession.findUnique({
-      where: { refreshToken },
+      where: { refreshToken: hashToken(rawRefreshToken) },
     });
   }
 

@@ -17,6 +17,12 @@ export class ChairsController {
     return this.chairsService.findAll(user.tenantId);
   }
 
+  @Get('live')
+  @RequirePermissions('calendar:read')
+  async findLive(@CurrentUser() user: AuthenticatedUser) {
+    return this.chairsService.findLive(user.tenantId);
+  }
+
   @Get(':id')
   @RequirePermissions('calendar:read')
   async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {

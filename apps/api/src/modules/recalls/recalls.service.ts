@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { CreateRecall, UpdateRecall, RecallQuery } from '@danta/schemas';
+import { CreateRecall, UpdateRecall, RecallQuery, RecallType } from '@danta/schemas';
 
 @Injectable()
 export class RecallsService {
@@ -31,6 +31,9 @@ export class RecallsService {
   }
 
   async findOne(tenantId: string, id: string) {
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)) {
+      throw new NotFoundException('Recall not found');
+    }
     const recall = await this.prisma.recall.findFirst({
       where: { id, tenantId },
     });
@@ -72,5 +75,41 @@ export class RecallsService {
     });
 
     return recall;
+  }
+
+  async getConfigs(tenantId: string) {
+    return this.prisma.recall_type_configs.findMany({
+      where: { tenantId },
+      orderBy: { type: 'asc' },
+    });
+  }
+
+  async updateConfig(tenantId: string, userId: string, type: RecallType, data: { intervalDays?: number; channel?: 'sms' | 'email' | 'both'; isActive?: boolean }) {
+    const existing = await this.prisma.recall_type_configs.findFirst({
+      where: { tenantId, type },
+    });
+
+    let config;
+    if (existing) {
+      config = await this.prisma.recall_type_configs.update({
+        where: { id: existing.id },
+        data,
+      });
+    } else {
+      config = await this.prisma.recall_type_configs.create({
+        data: { tenantId, type, ...data },
+      });
+    }
+
+    await this.auditService.log({
+      tenantId,
+      userId,
+      action: 'recall.config.update',
+      resourceType: 'recall_config',
+      resourceId: config.id,
+      result: 'success',
+    });
+
+    return config;
   }
 }

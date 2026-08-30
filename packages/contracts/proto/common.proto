@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package danta.common;
+
+message CorrelationId {
+  string value = 1;
+}
+
+message RequestId {
+  string value = 1;
+}
+
+message TenantContext {
+  string tenantId = 1;
+  string practiceId = 2;
+  string locationId = 3;
+}
+
+message AuthenticatedIdentity {
+  string userId = 1;
+  string tenantId = 2;
+  string email = 3;
+  string role = 4;
+  string type = 5;
+  repeated string scopes = 6;
+}
+
+message ServiceError {
+  string code = 1;
+  string message = 2;
+  string correlationId = 3;
+}

@@ -23,6 +23,16 @@ export class ImagingStudiesController {
     return this.imagingStudiesService.findOne(user.tenantId, id);
   }
 
+  @Post('batch-conditions')
+  @RequirePermissions('imaging:read')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  async batchConditions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { patientId: string; toothNumbers?: number[]; modality?: string },
+  ) {
+    return this.imagingStudiesService.batchConditions(user.tenantId, body);
+  }
+
   @Post()
   @RequirePermissions('imaging:upload')
   async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateImagingStudy) {
