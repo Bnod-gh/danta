@@ -238,8 +238,7 @@ describe('PatientPortalService', () => {
       data: expect.objectContaining({
         firstName: 'Original',
         lastName: 'Name',
-        email: 'original@example.com',
-        phone: '+1234567890',
+        passwordHash: expect.any(String),
       }),
     }));
   });

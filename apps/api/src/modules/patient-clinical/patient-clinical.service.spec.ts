@@ -94,7 +94,7 @@ describe('PatientClinicalService', () => {
       {
         id: 'a1', startTime: t1, status: 'completed', notes: null,
         appointmentType: { name: 'Exam' }, providerId: 'prov-1', chairId: 'chair-1',
-        statusEvents: [{ id: 'se1', toStatus: 'cancelled', createdAt: t0, note: 'no-show fee waived' }],
+        appointment_status_events: [{ id: 'se1', toStatus: 'cancelled', createdAt: t0, note: 'no-show fee waived' }],
       },
     ]);
     mockPrisma.clinicalNote.findMany.mockResolvedValue([

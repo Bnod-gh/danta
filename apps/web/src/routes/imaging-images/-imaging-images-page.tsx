@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Pencil, Printer, Search, Upload, Radiation } from 'lucide-react';
+import { Pencil, Printer, Search, Upload, Radiation, Trash2 } from 'lucide-react';
 import { Button } from '@danta/ui/button';
 import { Input } from '@danta/ui/input';
 import { Label } from '@danta/ui/label';
@@ -27,7 +27,7 @@ import {
 } from '@danta/ui/select';
 import { RadiographViewer } from '../../components/imaging/RadiographViewer';
 import { CameraCaptureDialog } from '../../components/imaging/CameraCaptureDialog';
-import { ensureOpenStudy, getImages, updateImage, uploadImage, type ImageRow } from '../../lib/api/imaging';
+import { ensureOpenStudy, getImages, updateImage, uploadImage, deleteImage, type ImageRow } from '../../lib/api/imaging';
 import { apiGet } from '../../lib/api/request';
 import type { Patient, Provider } from '@danta/schemas';
 import { toast } from 'sonner';
@@ -195,8 +195,25 @@ export function ImagingImagesPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{new Date(image.createdAt).toLocaleDateString('en-AU')}</TableCell>
                   <TableCell className="text-muted-foreground">{Math.round(image.size / 1024)} KB</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setViewerImage(image)}>View</Button>
+                   <TableCell>
+                     <Button variant="ghost" size="sm" onClick={() => setViewerImage(image)}>View</Button>
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       onClick={async (e) => {
+                         e.stopPropagation();
+                         if (!confirm('Delete this image? This cannot be undone.')) return;
+                         try {
+                           await deleteImage(image.id);
+                           toast.success('Image deleted');
+                           refresh();
+                         } catch {
+                           toast.error('Failed to delete image');
+                         }
+                       }}
+                     >
+                       <Trash2 className="h-4 w-4 text-destructive" />
+                     </Button>
                   </TableCell>
                 </TableRow>
               ))

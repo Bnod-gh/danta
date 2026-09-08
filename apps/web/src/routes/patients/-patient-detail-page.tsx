@@ -1,14 +1,18 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import { Phone, Mail, FileText, CreditCard, Stethoscope, AlertTriangle, Pill, HeartPulse, Activity, PhoneOff, ShieldCheck, Users, Camera } from 'lucide-react';
+import { Phone, Mail, FileText, CreditCard, Stethoscope, AlertTriangle, Pill, HeartPulse, Activity, PhoneOff, ShieldCheck, Users, Camera, Radiation, Plus, Trash2, Edit, Download, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@danta/ui/card';
 import { Button } from '@danta/ui/button';
 import { Badge } from '@danta/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@danta/ui/tabs';
 import { Skeleton } from '@danta/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@danta/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@danta/ui/dialog';
+import { Textarea } from '@danta/ui/textarea';
+import { Input } from '@danta/ui/input';
+import { Label } from '@danta/ui/label';
+import { Select } from '@danta/ui/select';
 import {
   Table,
   TableBody,
@@ -25,15 +29,37 @@ import { PatientEditDialog } from '../../components/patients/PatientEditDialog';
 import { GuardianDialog } from '../../components/patients/GuardianDialog';
 import { PatientTimelinePanel } from '../../components/patients/PatientTimelinePanel';
 import { CameraCaptureDialog } from '../../components/imaging/CameraCaptureDialog';
-import { downloadImageOriginal } from '../../lib/api/imaging';
+import { PatientImagingGallery } from '../../components/imaging/PatientImagingGallery';
 import { RecordTreatmentsDialog } from '../../components/patients/RecordTreatmentsDialog';
 import { tenantPath } from '../../lib/tenant-routing';
 import { RelationshipDialog } from '../../components/patients/RelationshipDialog';
 import {
   getPatientAlerts,
   updatePatient,
-  type RelationshipView,
+  getMedications,
+  createMedication,
+  updateMedication,
+  deleteMedication,
+  getClinicalNotes,
+  createClinicalNote,
+  updateClinicalNote,
+  deleteClinicalNote,
+  getTreatmentPlans,
+  createTreatmentPlan,
+  updateTreatmentPlan,
+  deleteTreatmentPlan,
+  getTreatmentHistory,
+  createTreatmentHistory,
+  updateTreatmentHistory,
+   deleteTreatmentHistory,
+     getPatientDocuments,
+    uploadPatientDocument,
+    deletePatientDocument,
+    downloadPatientDocument,
+    getDocumentTypes,
+    type RelationshipView,
 } from '../../lib/api/patient-clinical';
+import { initiateTwainScan } from '../../lib/api/imaging';
 import {
   INVERSE_RELATIONSHIP_TYPE,
   describeRelationship,
@@ -42,7 +68,17 @@ import {
   Payment,
   type PatientLegalGuardian,
   type PatientRelationshipType,
+  type PatientMedication,
+  type ClinicalNote,
+  type TreatmentPlan,
+  type TreatmentHistory,
+  type PatientDocument,
+  type CreatePatientMedication,
+  type CreateClinicalNote,
+  type CreateTreatmentPlan,
+  type CreateTreatmentHistory,
 } from '@danta/schemas';
+import { useAuth } from '../../lib/auth-context';
 import { formatCurrency } from '../../lib/format';
 
 type WorkspacePatient = Patient & {
@@ -98,6 +134,7 @@ function formatDate(value?: string | Date | null): string {
 }
 
 export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
+  const { user } = useAuth();
   const routeParams = useParams({ strict: false }) as { id?: string };
   const id = patientId ?? routeParams.id;
   const [activeTab, setActiveTab] = useState('overview');
@@ -108,8 +145,16 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
   const [guardianOpen, setGuardianOpen] = useState(false);
   const [relationshipsOpen, setRelationshipsOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [viewerImageId, setViewerImageId] = useState<string | null>(null);
-  const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
+  const [medDialogOpen, setMedDialogOpen] = useState(false);
+  const [medEditId, setMedEditId] = useState<string | null>(null);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [noteEditId, setNoteEditId] = useState<string | null>(null);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [planEditId, setPlanEditId] = useState<string | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyEditId, setHistoryEditId] = useState<string | null>(null);
+  const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<PatientDocument | null>(null);
 
   const queryClient = useQueryClient();
   const refreshWorkspace = () => queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
@@ -140,6 +185,41 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
       await queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
     },
     onError: () => toast.error('Failed to update contact preference'),
+  });
+
+  const { data: medications = [] } = useQuery({
+    queryKey: ['patient-medications', id],
+    queryFn: () => getMedications(id as string),
+    enabled: !!id,
+  });
+
+  const { data: clinicalNotes = [] } = useQuery({
+    queryKey: ['patient-clinical-notes', id],
+    queryFn: () => getClinicalNotes(id as string),
+    enabled: !!id,
+  });
+
+  const { data: treatmentPlans = [] } = useQuery({
+    queryKey: ['patient-treatment-plans', id],
+    queryFn: () => getTreatmentPlans(id as string),
+    enabled: !!id,
+  });
+
+  const { data: treatmentHistory = [] } = useQuery({
+    queryKey: ['patient-treatment-history', id],
+    queryFn: () => getTreatmentHistory(id as string),
+    enabled: !!id,
+  });
+
+  const { data: patientDocuments = [], refetch: refetchDocuments } = useQuery({
+    queryKey: ['patient-documents', id],
+    queryFn: () => getPatientDocuments(id as string),
+    enabled: !!id,
+  });
+
+  const { data: documentTypes = [] } = useQuery({
+    queryKey: ['document-types'],
+    queryFn: getDocumentTypes,
   });
 
   const age = useMemo(() => {
@@ -217,18 +297,6 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
     return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
   };
 
-  const openImageViewer = async (image: { id: string; fileName: string; url?: string; storageKey?: string; mimeType?: string; toothNumber?: string }) => {
-    try {
-      const blob = await downloadImageOriginal(image.id);
-      const url = URL.createObjectURL(blob);
-      setViewerImageUrl(url);
-      setViewerImageId(image.id);
-    } catch {
-      setViewerImageUrl(image.url || `/storage/${image.storageKey}`);
-      setViewerImageId(image.id);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -243,10 +311,10 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link to={tenantPath(id ?? '', `patients/${id}/clinical`)}>Clinical workspace</Link>
+            <Link to={tenantPath(user?.tenantId, `patients/${id}/clinical`)}>Clinical workspace</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/appointments">Book Appointment</Link>
+            <Link to={tenantPath(user?.tenantId, '/appointments')}>Book Appointment</Link>
           </Button>
           <Button
             variant={patient.doNotContact ? 'destructive' : 'outline'}
@@ -375,28 +443,84 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
           </Card>
 
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Pill className="h-4 w-4" /> Medications</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2"><Pill className="h-4 w-4" /> Medications</span>
+                <Button size="sm" variant="outline" onClick={() => { setMedEditId(null); setMedDialogOpen(true); }}>
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
-              {patient.medications.length === 0 && <p className="text-sm text-muted-foreground">None recorded.</p>}
-              {patient.medications.map((medication) => (
+              {medications.length === 0 && <p className="text-sm text-muted-foreground">None recorded.</p>}
+              {medications.map((medication) => (
                 <div key={medication.id} className="rounded-md border px-3 py-2 text-sm">
-                  <span className="font-medium">{medication.name}</span>
-                  {medication.dosage && <span className="text-muted-foreground"> · {medication.dosage}</span>}
-                  {medication.frequency && <span className="text-muted-foreground"> · {medication.frequency}</span>}
+                  <div className="flex justify-between">
+                    <span>
+                      <span className="font-medium">{medication.name}</span>
+                      {medication.dosage && <span className="text-muted-foreground"> · {medication.dosage}</span>}
+                      {medication.frequency && <span className="text-muted-foreground"> · {medication.frequency}</span>}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => { setMedEditId(medication.id); setMedDialogOpen(true); }}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        if (!confirm('Delete this medication?')) return;
+                        try {
+                          await deleteMedication(id!, medication.id);
+                          toast.success('Medication deleted');
+                          queryClient.invalidateQueries({ queryKey: ['patient-medications', id] });
+                          queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
+                        } catch {
+                          toast.error('Failed to delete medication');
+                        }
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Stethoscope className="h-4 w-4" /> Clinical Notes</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Clinical Notes</span>
+                <Button size="sm" variant="outline" onClick={() => { setNoteEditId(null); setNoteDialogOpen(true); }}>
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
-              {patient.clinicalNotes.length === 0 && <p className="text-sm text-muted-foreground">No notes yet.</p>}
-              {patient.clinicalNotes.slice(0, 8).map((note) => (
+              {clinicalNotes.length === 0 && <p className="text-sm text-muted-foreground">No notes yet.</p>}
+              {clinicalNotes.slice(0, 8).map((note) => (
                 <div key={note.id} className="rounded-md border px-3 py-2">
                   <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-                    <Badge variant="outline">{note.type}</Badge>
-                    <span>{formatDate(note.createdAt)}{note.signedAt ? ' · signed' : ''}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{note.type}</Badge>
+                      <span>{formatDate(note.createdAt)}{note.signedAt ? ' · signed' : ''}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => { setNoteEditId(note.id); setNoteDialogOpen(true); }}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        if (!confirm('Delete this note?')) return;
+                        try {
+                          await deleteClinicalNote(note.id);
+                          toast.success('Clinical note deleted');
+                          queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', id] });
+                          queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
+                        } catch {
+                          toast.error('Failed to delete clinical note');
+                        }
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                   <p className="line-clamp-3 text-sm">{note.note}</p>
                 </div>
@@ -405,23 +529,79 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
           </Card>
 
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Treatment Plans & History</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-base">
+                <span>Treatment Plans & History</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setPlanEditId(null); setPlanDialogOpen(true); }}>
+                    <Plus className="h-4 w-4" /> Plan
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setHistoryEditId(null); setHistoryDialogOpen(true); }}>
+                    <Plus className="h-4 w-4" /> History
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
-              {patient.treatmentPlans.map((plan) => (
+              {treatmentPlans.map((plan) => (
                 <div key={plan.id} className="rounded-md border px-3 py-2 text-sm">
-                  <span className="font-medium">{plan.name}</span>
-                  <Badge variant="secondary" className="ml-2">{plan.status.replace(/_/g, ' ')}</Badge>
-                  <p className="mt-1 whitespace-pre-line text-xs text-muted-foreground line-clamp-4">{plan.notes}</p>
+                  <div className="flex justify-between">
+                    <div>
+                      <span className="font-medium">{plan.name}</span>
+                      <Badge variant="secondary" className="ml-2">{plan.status.replace(/_/g, ' ')}</Badge>
+                      <p className="mt-1 whitespace-pre-line text-xs text-muted-foreground line-clamp-4">{plan.notes}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => { setPlanEditId(plan.id); setPlanDialogOpen(true); }}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        if (!confirm('Delete this treatment plan?')) return;
+                        try {
+                          await deleteTreatmentPlan(plan.id);
+                          toast.success('Treatment plan deleted');
+                          queryClient.invalidateQueries({ queryKey: ['patient-treatment-plans', id] });
+                          queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
+                        } catch {
+                          toast.error('Failed to delete treatment plan');
+                        }
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
-              {patient.treatmentHistory.slice(0, 5).map((history) => (
+              {treatmentHistory.map((history) => (
                 <div key={history.id} className="rounded-md border px-3 py-2 text-sm">
-                  <span className="font-medium">{history.treatment}</span>
-                  <span className="float-right text-xs text-muted-foreground">{formatDate(history.date)}</span>
-                  {history.cost != null && <span className="ml-2 text-xs">{formatCurrency(Number(history.cost))}</span>}
+                  <div className="flex justify-between">
+                    <div>
+                      <span className="font-medium">{history.treatment}</span>
+                      <span className="float-right text-xs text-muted-foreground">{formatDate(history.date)}</span>
+                      {history.cost != null && <span className="ml-2 text-xs">{formatCurrency(Number(history.cost))}</span>}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => { setHistoryEditId(history.id); setHistoryDialogOpen(true); }}>
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={async () => {
+                        if (!confirm('Delete this treatment record?')) return;
+                        try {
+                          await deleteTreatmentHistory(history.id);
+                          toast.success('Treatment record deleted');
+                          queryClient.invalidateQueries({ queryKey: ['patient-treatment-history', id] });
+                          queryClient.invalidateQueries({ queryKey: ['patient-workspace', id] });
+                        } catch {
+                          toast.error('Failed to delete treatment record');
+                        }
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
-              {patient.treatmentPlans.length === 0 && patient.treatmentHistory.length === 0 && (
+              {treatmentPlans.length === 0 && treatmentHistory.length === 0 && (
                 <p className="text-sm text-muted-foreground">No treatment records.</p>
               )}
             </CardContent>
@@ -578,44 +758,17 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {patient.imagingStudies && patient.imagingStudies.length > 0 ? (
-                <div className="space-y-4">
-                  {patient.imagingStudies.slice(0, 6).map((study) => (
-                    <div key={study.id} className="rounded-md border px-3 py-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{study.modality?.replace(/_/g, ' ') ?? 'Unknown'}</span>
-                        <span className="text-xs text-muted-foreground">{formatDate(study.studyDate)}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2">
-                        {(study.images ?? []).slice(0, 8).map((image: any) => (
-                          <button
-                            key={image.id}
-                            type="button"
-                            onClick={() => openImageViewer(image)}
-                            className="relative aspect-square rounded border bg-muted hover:opacity-85 transition-opacity"
-                          >
-                             <img
-                              src={`/storage/${image.storageKey}`}
-                              alt={image.fileName}
-                              className="h-full w-full object-cover rounded"
-                              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-image.png'; }}
-                            />
-                            {image.toothNumber && (
-                              <Badge variant="secondary" className="absolute top-0.5 right-0.5 h-4 w-4 min-w-[1rem] text-[9px] font-mono">{image.toothNumber}</Badge>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No imaging studies recorded.</p>
-              )}
-              <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => setCameraOpen(true)}>
-                <Camera className="h-4 w-4" />
-                Capture image
-              </Button>
+              <div className="flex gap-2 mb-4">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCameraOpen(true)}>
+                  <Camera className="h-4 w-4" />
+                  Capture image
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCameraOpen(true)}>
+                  <Radiation className="h-4 w-4" />
+                  Acquisition
+                </Button>
+              </div>
+              <PatientImagingGallery patientId={id ?? ''} patientName={patient.firstName} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -686,8 +839,18 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
 
         <TabsContent value="documents" className="space-y-4">
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Documents & Forms</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setDocDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Add
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-0">
-              {patient.documents.length === 0 && patient.forms.length === 0 ? (
+              {(patientDocuments.length === 0 && patient.forms.length === 0) ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">No documents or forms on file.</p>
               ) : (
                 <Table>
@@ -697,15 +860,51 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
                       <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
+                      <TableHead className="w-24 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {patient.documents.map((document) => (
-                      <TableRow key={document.id}>
-                        <TableCell className="font-medium">{document.documentName ?? document.fileName ?? 'Document'}</TableCell>
-                        <TableCell>{document.fileType ?? '—'}</TableCell>
+                    {patientDocuments.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell className="font-medium">{doc.name}</TableCell>
+                        <TableCell>{doc.mimeType ?? '—'}</TableCell>
                         <TableCell>—</TableCell>
-                        <TableCell>{formatDate(document.uploadedAt ?? document.createdAt)}</TableCell>
+                        <TableCell>{formatDate(doc.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="ghost" onClick={() => setViewingDocument(doc)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={async () => {
+                            try {
+                              const blob = await downloadPatientDocument(id!, doc.id);
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = doc.name;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              toast.error('Failed to download document');
+                            }
+                          }}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={async () => {
+                            if (!confirm('Delete this document?')) return;
+                            try {
+                              await deletePatientDocument(id!, doc.id);
+                              toast.success('Document deleted');
+                              refetchDocuments();
+                              refreshWorkspace();
+                            } catch {
+                              toast.error('Failed to delete document');
+                            }
+                          }}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {patient.forms.map((form) => (
@@ -714,6 +913,7 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
                         <TableCell>Patient form</TableCell>
                         <TableCell><Badge variant={form.status === 'submitted' ? 'default' : 'secondary'}>{form.status}</Badge></TableCell>
                         <TableCell>{formatDate(form.submittedAt ?? form.createdAt)}</TableCell>
+                        <TableCell />
                       </TableRow>
                     ))}
                   </TableBody>
@@ -754,22 +954,813 @@ export function PatientDetailPage({ patientId }: { patientId?: string } = {}) {
 
       <CameraCaptureDialog open={cameraOpen} onOpenChange={setCameraOpen} presetPatientId={id} />
 
-      <Dialog open={!!viewerImageId} onOpenChange={(open) => { if (!open) { setViewerImageId(null); setViewerImageUrl(null); } }}>
-        <DialogContent className="max-w-4xl p-0">
-          <DialogHeader className="p-4 pb-0">
-            <DialogTitle>Imaging viewer</DialogTitle>
-          </DialogHeader>
-          {viewerImageUrl && (
-            <img
-              src={viewerImageUrl}
-              alt="Imaging"
-              className="h-[70vh] w-full object-contain bg-black"
-              onError={(e) => {(e.target as HTMLImageElement).src = '/placeholder-image.png';}}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <MedicationDialog
+        open={medDialogOpen}
+        onOpenChange={setMedDialogOpen}
+        medicationId={medEditId ?? undefined}
+        medication={medEditId ? medications.find((m) => m.id === medEditId) ?? null : null}
+        patientId={id}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-medications', id] });
+          refreshWorkspace();
+        }}
+      />
+
+      <ClinicalNoteDialog
+        open={noteDialogOpen}
+        onOpenChange={setNoteDialogOpen}
+        noteId={noteEditId ?? undefined}
+        note={noteEditId ? clinicalNotes.find((n) => n.id === noteEditId) ?? null : null}
+        patientId={id}
+        providerId={user?.id ?? ''}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-clinical-notes', id] });
+          refreshWorkspace();
+        }}
+      />
+
+      <TreatmentPlanDialog
+        open={planDialogOpen}
+        onOpenChange={setPlanDialogOpen}
+        planId={planEditId ?? undefined}
+        plan={planEditId ? treatmentPlans.find((p) => p.id === planEditId) ?? null : null}
+        patientId={id}
+        providerId={user?.id ?? ''}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-treatment-plans', id] });
+          refreshWorkspace();
+        }}
+      />
+
+      <TreatmentHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        historyId={historyEditId ?? undefined}
+        record={historyEditId ? treatmentHistory.find((h) => h.id === historyEditId) ?? null : null}
+        patientId={id}
+        providerId={user?.id ?? ''}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-treatment-history', id] });
+          refreshWorkspace();
+        }}
+       />
+
+      <DocumentUploadDialog
+        open={docDialogOpen}
+        onOpenChange={setDocDialogOpen}
+        patientId={id}
+        documentTypes={documentTypes}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['patient-documents', id] });
+          refreshWorkspace();
+        }}
+      />
+
+      <DocumentViewerDialog
+        open={Boolean(viewingDocument)}
+        onOpenChange={() => setViewingDocument(null)}
+         doc={viewingDocument}
+        patientId={id}
+      />
     </div>
+  );
+}
+
+function DocumentUploadDialog({
+  open,
+  onOpenChange,
+  patientId,
+  documentTypes,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  patientId: string | undefined;
+  documentTypes: Array<{ id: string; name: string }>;
+  onSaved: () => void;
+}) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [docName, setDocName] = useState('');
+  const [docType, setDocType] = useState('');
+  const [customType, setCustomType] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [scanMode, setScanMode] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedFile(null);
+      setDocName('');
+      setDocType('');
+      setCustomType('');
+      setUploading(false);
+      setScanMode(false);
+    }
+  }, [open]);
+
+  const effectiveType = docType === 'custom' ? customType : docType;
+
+  const handleUpload = async () => {
+    if (!selectedFile || !patientId) return;
+    if (!docName.trim()) return toast.error('Document name is required');
+    if (!effectiveType.trim()) return toast.error('Select a document type');
+    setUploading(true);
+    try {
+      await uploadPatientDocument(patientId, selectedFile, `${docName} (${effectiveType.trim()})`);
+      toast.success('Document uploaded');
+      onSaved();
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to upload document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleScan = async () => {
+    if (!patientId) return;
+    if (!effectiveType.trim()) return toast.error('Select a document type');
+    setScanMode(true);
+    try {
+      const result = await initiateTwainScan({ patientId });
+      toast.success(`Scan initiated. Status: ${result.status}`, {
+        description: `Use the TWAIN companion app to complete the scan.`,
+      });
+      onSaved();
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to initiate scan');
+      setScanMode(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add document</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Document type</Label>
+            <Select value={docType} onChange={(e) => { setDocType(e.target.value); if (e.target.value !== 'custom') setCustomType(''); }}>
+              <option value="">Select type</option>
+              {documentTypes.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+              <option value="custom">Other (specify)</option>
+            </Select>
+          </div>
+          {docType === 'custom' && (
+            <div className="space-y-1.5">
+              <Label>Custom type name</Label>
+              <Input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="e.g. Consent Form" />
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Document name</Label>
+            <Input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" />
+          </div>
+          {!scanMode && (
+            <div className="space-y-1.5">
+              <Label>File</Label>
+              <input type="file" accept="image/*,.pdf,.doc,.docx,.txt" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
+            Cancel
+          </Button>
+          {uploading ? (
+            <Button disabled>Uploading…</Button>
+          ) : (
+            <>
+              {!scanMode && (
+                <Button onClick={handleUpload} disabled={!selectedFile}>
+                  Upload
+                </Button>
+              )}
+              <Button onClick={handleScan} disabled={scanMode} variant="secondary">
+                <Camera className="h-4 w-4 mr-2" /> Scan
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DocumentViewerDialog({
+  open,
+  onOpenChange,
+  doc,
+  patientId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  doc: PatientDocument | null;
+  patientId: string | undefined;
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mimeType = doc?.mimeType ?? '';
+  const isPdf = mimeType.includes('pdf');
+  const isImage = mimeType.includes('image');
+  const canDownload = Boolean(doc && patientId);
+
+  useEffect(() => {
+    let url: string | null = null;
+    if (!doc || !patientId) {
+      setBlobUrl(null);
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    downloadPatientDocument(patientId, doc.id)
+      .then((blob) => {
+        url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load document. This may be a permission or network issue.');
+        setLoading(false);
+      });
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [doc, patientId]);
+
+  const viewUrl = blobUrl ?? '';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle>{doc?.name ?? 'Document Viewer'}</DialogTitle>
+        </DialogHeader>
+        <div className="relative flex items-center justify-center bg-muted/10 rounded-md" style={{ minHeight: '300px' }}>
+          {loading ? (
+            <Skeleton className="h-96 w-full" />
+          ) : error ? (
+            <div className="p-8 text-center text-destructive">{error}</div>
+          ) : !viewUrl ? (
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No document available for viewing.</p>
+            </div>
+          ) : isPdf ? (
+            <iframe src={viewUrl} title={doc?.name ?? 'Document'} className="w-full h-[600px] border-0" />
+          ) : isImage ? (
+            <img src={viewUrl} alt={doc?.name ?? 'Document'} className="max-w-full max-h-[600px] object-contain" />
+          ) : (
+            <iframe src={viewUrl} title={doc?.name ?? 'Document'} className="w-full h-[600px] border-0" />
+          )}
+        </div>
+        <DialogFooter>
+          {canDownload && (
+            <Button size="sm" variant="outline" onClick={async () => {
+              if (!doc || !patientId) return;
+              try {
+                const blob = await downloadPatientDocument(patientId, doc.id);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = doc.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch {
+                toast.error('Failed to download document');
+              }
+            }}>
+              <Download className="h-4 w-4 mr-2" /> Download
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MedicationDialog({
+  open,
+  onOpenChange,
+  medicationId,
+  medication,
+  patientId,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  medicationId?: string;
+  medication: PatientMedication | null;
+  patientId: string | undefined;
+  onSaved: () => void;
+}) {
+  const isEdit = Boolean(medicationId);
+  const [name, setName] = useState(medication?.name ?? '');
+  const [dosage, setDosage] = useState(medication?.dosage ?? '');
+  const [frequency, setFrequency] = useState(medication?.frequency ?? '');
+  const [prescribedBy, setPrescribedBy] = useState(medication?.prescribedBy ?? '');
+  const [startDate, setStartDate] = useState(medication?.startDate ? new Date(medication.startDate).toISOString().slice(0, 10) : '');
+  const [endDate, setEndDate] = useState(medication?.endDate ? new Date(medication.endDate).toISOString().slice(0, 10) : '');
+  const [isActive, setIsActive] = useState(medication?.isActive ?? true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEdit) {
+      setName('');
+      setDosage('');
+      setFrequency('');
+      setPrescribedBy('');
+      setStartDate('');
+      setEndDate('');
+      setIsActive(true);
+    }
+  }, [open, isEdit]);
+
+  const medMutations = useMutation<unknown, Error, { action: 'create' | 'update' | 'delete'; data?: CreatePatientMedication }>({
+    mutationFn: ({ action, data }) => {
+      if (!patientId) return Promise.reject(new Error('No patient'));
+      if (action === 'create') return createMedication(patientId, data!);
+      if (action === 'update' && medicationId) return updateMedication(patientId, medicationId, data!);
+      if (action === 'delete' && medicationId) return deleteMedication(patientId, medicationId);
+      return Promise.reject(new Error('Invalid'));
+    },
+    onSuccess: () => {
+      toast.success(isEdit ? 'Medication updated' : 'Medication added');
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: () => toast.error('Failed to save medication'),
+  });
+
+  const submit = async () => {
+    if (!name.trim()) return toast.error('Name is required');
+    setSaving(true);
+    try {
+      await medMutations.mutateAsync({
+        action: isEdit ? 'update' : 'create',
+        data: {
+          name: name.trim(),
+          ...(dosage ? { dosage } : {}),
+          ...(frequency ? { frequency } : {}),
+          ...(prescribedBy ? { prescribedBy } : {}),
+          ...(startDate ? { startDate: new Date(startDate) } : {}),
+          ...(endDate ? { endDate: new Date(endDate) } : {}),
+          isActive,
+        } as CreatePatientMedication,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this medication?')) return;
+    try {
+      await medMutations.mutateAsync({ action: 'delete' });
+    } catch {}
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Edit medication' : 'Add medication'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Medication name" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Dosage</Label>
+              <Input value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="e.g. 500mg" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Frequency</Label>
+              <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} placeholder="e.g. BID" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Prescribed by</Label>
+            <Input value={prescribedBy} onChange={(e) => setPrescribedBy(e.target.value)} placeholder="Provider name" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Start date</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>End date</Label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="is-active" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <Label htmlFor="is-active">Active</Label>
+          </div>
+        </div>
+        <DialogFooter>
+          {isEdit && (
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ClinicalNoteDialog({
+  open,
+  onOpenChange,
+  noteId,
+  note,
+  patientId,
+  providerId,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  noteId?: string;
+  note: ClinicalNote | null;
+  patientId: string | undefined;
+  providerId: string;
+  onSaved: () => void;
+}) {
+  const isEdit = Boolean(noteId);
+  const [type, setType] = useState(note?.type ?? 'general');
+  const [noteText, setNoteText] = useState(note?.note ?? '');
+  const [subjective, setSubjective] = useState(note?.subjective ?? '');
+  const [objective, setObjective] = useState(note?.objective ?? '');
+  const [assessment, setAssessment] = useState(note?.assessment ?? '');
+  const [plan, setPlan] = useState(note?.plan ?? '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEdit) {
+      setType('general');
+      setNoteText('');
+      setSubjective('');
+      setObjective('');
+      setAssessment('');
+      setPlan('');
+    }
+  }, [open, isEdit]);
+
+  const noteMutations = useMutation<unknown, Error, { action: 'create' | 'update' | 'delete' }>({
+    mutationFn: ({ action }) => {
+      if (action === 'create') {
+        return createClinicalNote({
+          patientId: patientId!,
+          providerId,
+          note: noteText.trim(),
+          ...(type ? { type } : {}),
+          ...(subjective ? { subjective } : {}),
+          ...(objective ? { objective } : {}),
+          ...(assessment ? { assessment } : {}),
+          ...(plan ? { plan } : {}),
+        } as CreateClinicalNote);
+      }
+      if (action === 'update' && noteId) {
+        return updateClinicalNote(noteId, { note: noteText, type, ...(subjective ? { subjective } : {}), ...(objective ? { objective } : {}), ...(assessment ? { assessment } : {}), ...(plan ? { plan } : {}) });
+      }
+      if (action === 'delete' && noteId) return deleteClinicalNote(noteId);
+      return Promise.reject(new Error('Invalid'));
+    },
+    onSuccess: () => {
+      toast.success(isEdit ? 'Note updated' : 'Note added');
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: () => toast.error('Failed to save note'),
+  });
+
+  const submit = async () => {
+    if (!noteText.trim()) return toast.error('Note is required');
+    setSaving(true);
+    try {
+      await noteMutations.mutateAsync({ action: isEdit ? 'update' : 'create' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this note?')) return;
+    try {
+      await noteMutations.mutateAsync({ action: 'delete' });
+    } catch {}
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Edit clinical note' : 'Add clinical note'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <Select value={type} onChange={(e) => setType(e.target.value as ClinicalNote['type'])}>
+              <option value="general">General</option>
+              <option value="examination">Examination</option>
+              <option value="procedure">Procedure</option>
+              <option value="referral">Referral</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Note</Label>
+            <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Clinical note..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Subjective</Label>
+            <Textarea value={subjective} onChange={(e) => setSubjective(e.target.value)} placeholder="Subjective..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Objective</Label>
+            <Textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Objective..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Assessment</Label>
+            <Textarea value={assessment} onChange={(e) => setAssessment(e.target.value)} placeholder="Assessment..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Plan</Label>
+            <Textarea value={plan} onChange={(e) => setPlan(e.target.value)} placeholder="Plan..." />
+          </div>
+        </div>
+        <DialogFooter>
+          {isEdit && (
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TreatmentPlanDialog({
+  open,
+  onOpenChange,
+  planId,
+  plan,
+  patientId,
+  providerId,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  planId?: string;
+  plan: TreatmentPlan | null;
+  patientId: string | undefined;
+  providerId: string;
+  onSaved: () => void;
+}) {
+  const isEdit = Boolean(planId);
+  const [name, setName] = useState(plan?.name ?? '');
+  const [status, setStatus] = useState(plan?.status ?? 'draft');
+  const [notes, setNotes] = useState(plan?.notes ?? '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEdit) {
+      setName('');
+      setStatus('draft');
+      setNotes('');
+    }
+  }, [open, isEdit]);
+
+  const planMutations = useMutation<unknown, Error, { action: 'create' | 'update' | 'delete' }>({
+    mutationFn: ({ action }) => {
+      if (action === 'create') {
+        return createTreatmentPlan({
+          patientId: patientId!,
+          providerId,
+          name: name.trim(),
+          status: status as TreatmentPlan['status'],
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        } as CreateTreatmentPlan);
+      }
+      if (action === 'update' && planId) {
+        return updateTreatmentPlan(planId, {
+          ...(name.trim() ? { name: name.trim() } : {}),
+          ...(status ? { status: status as TreatmentPlan['status'] } : {}),
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        });
+      }
+      if (action === 'delete' && planId) return deleteTreatmentPlan(planId);
+      return Promise.reject(new Error('Invalid'));
+    },
+    onSuccess: () => {
+      toast.success(isEdit ? 'Treatment plan updated' : 'Treatment plan added');
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: () => toast.error('Failed to save treatment plan'),
+  });
+
+  const submit = async () => {
+    if (!name.trim()) return toast.error('Name is required');
+    setSaving(true);
+    try {
+      await planMutations.mutateAsync({ action: isEdit ? 'update' : 'create' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this treatment plan?')) return;
+    try {
+      await planMutations.mutateAsync({ action: 'delete' });
+    } catch {}
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Edit treatment plan' : 'Add treatment plan'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Plan name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <Select value={status} onChange={(e) => setStatus(e.target.value as TreatmentPlan['status'])}>
+              <option value="draft">Draft</option>
+              <option value="proposed">Proposed</option>
+              <option value="approved">Approved</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notes</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Plan notes..." />
+          </div>
+        </div>
+        <DialogFooter>
+          {isEdit && (
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TreatmentHistoryDialog({
+  open,
+  onOpenChange,
+  historyId,
+  record,
+  patientId,
+  providerId,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  historyId?: string;
+  record: TreatmentHistory | null;
+  patientId: string | undefined;
+  providerId: string;
+  onSaved: () => void;
+}) {
+  const isEdit = Boolean(historyId);
+  const [treatment, setTreatment] = useState(record?.treatment ?? '');
+  const [description, setDescription] = useState(record?.description ?? '');
+  const [cost, setCost] = useState(record?.cost != null ? String(record.cost) : '');
+  const [date, setDate] = useState(record?.date ? new Date(record.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+  const [status, setStatus] = useState(record?.status ?? 'completed');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEdit) {
+      setTreatment('');
+      setDescription('');
+      setCost('');
+      setDate(new Date().toISOString().slice(0, 10));
+      setStatus('completed');
+    }
+  }, [open, isEdit]);
+
+  const historyMutations = useMutation<unknown, Error, { action: 'create' | 'update' | 'delete' }>({
+    mutationFn: ({ action }) => {
+      if (action === 'create') {
+        return createTreatmentHistory({
+          patientId: patientId!,
+          providerId,
+          treatment: treatment.trim(),
+          ...(description.trim() ? { description: description.trim() } : {}),
+          ...(cost.trim() ? { cost: Number(cost) } : {}),
+          date: new Date(date),
+          status,
+        } as CreateTreatmentHistory);
+      }
+      if (action === 'update' && historyId) {
+        return updateTreatmentHistory(historyId, {
+          ...(treatment.trim() ? { treatment: treatment.trim() } : {}),
+          ...(description.trim() ? { description: description.trim() } : {}),
+          ...(cost.trim() ? { cost: Number(cost) } : {}),
+          ...(date ? { date: new Date(date) } : {}),
+          ...(status ? { status } : {}),
+        });
+      }
+      if (action === 'delete' && historyId) return deleteTreatmentHistory(historyId);
+      return Promise.reject(new Error('Invalid'));
+    },
+    onSuccess: () => {
+      toast.success(isEdit ? 'Treatment record updated' : 'Treatment record added');
+      onSaved();
+      onOpenChange(false);
+    },
+    onError: () => toast.error('Failed to save treatment record'),
+  });
+
+  const submit = async () => {
+    if (!treatment.trim()) return toast.error('Treatment is required');
+    setSaving(true);
+    try {
+      await historyMutations.mutateAsync({ action: isEdit ? 'update' : 'create' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this treatment record?')) return;
+    try {
+      await historyMutations.mutateAsync({ action: 'delete' });
+    } catch {}
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Edit treatment record' : 'Add treatment record'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Treatment</Label>
+            <Input value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="Treatment name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description..." />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Cost</Label>
+              <Input value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" type="number" step="0.01" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Date</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="completed">Completed</option>
+              <option value="planned">Planned</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          {isEdit && (
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update' : 'Add'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

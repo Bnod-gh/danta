@@ -189,10 +189,28 @@ export class AppointmentsService {
   async getDaySchedule(tenantId: string, date: string) {
     const start = new Date(`${date}T00:00:00`);
     const end = new Date(`${date}T23:59:59.999`);
+    return this.fetchSchedule(tenantId, start, end);
+  }
+
+  async getWeekSchedule(tenantId: string, startDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return this.fetchSchedule(tenantId, start, end);
+  }
+
+  async getMonthSchedule(tenantId: string, startDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+    return this.fetchSchedule(tenantId, start, end);
+  }
+
+  private async fetchSchedule(tenantId: string, start: Date, end: Date) {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         tenantId,
-        startTime: { gte: start, lte: end },
+        startTime: { gte: start, lt: end },
         status: { not: 'cancelled' },
       },
       include: {
@@ -203,6 +221,6 @@ export class AppointmentsService {
       },
       orderBy: { startTime: 'asc' },
     });
-    return { date, appointments };
+    return { startDate: start.toISOString(), endDate: end.toISOString(), appointments };
   }
 }

@@ -53,3 +53,33 @@ export interface ClinicalTimelineEvent {
   detail?: string;
   metadata?: Record<string, unknown>;
 }
+
+export const OdontogramResponseSchema = z.object({
+  teeth: z.record(z.string(), z.object({
+    findings: z.array(z.any()),
+    treatments: z.array(z.any()),
+  })),
+  generatedAt: z.string(),
+});
+export type OdontogramResponse = z.infer<typeof OdontogramResponseSchema>;
+
+export const HistoricalOdontogramResponseSchema = z.object({
+  asOf: z.string(),
+  teeth: z.record(z.string(), z.object({
+    findings: z.array(z.any()),
+    treatments: z.array(z.any()),
+  })),
+});
+export type HistoricalOdontogramResponse = z.infer<typeof HistoricalOdontogramResponseSchema>;
+
+export const ToothHistoryResponseSchema = z.object({
+  events: z.array(z.any()),
+  total: z.number(),
+});
+export type ToothHistoryResponse = z.infer<typeof ToothHistoryResponseSchema>;
+
+export const ClinicalTimelineResponseSchema = z.object({
+  events: z.array(z.any()),
+  total: z.number(),
+});
+export type ClinicalTimelineResponse = z.infer<typeof ClinicalTimelineResponseSchema>;

@@ -29,6 +29,18 @@ export class AppointmentsController {
     return this.appointmentsService.getDaySchedule(user.tenantId, date);
   }
 
+  @Get('schedule/week')
+  @RequirePermissions('calendar:read')
+  async getWeekSchedule(@CurrentUser() user: AuthenticatedUser, @Query('startDate') startDate: string) {
+    return this.appointmentsService.getWeekSchedule(user.tenantId, startDate);
+  }
+
+  @Get('schedule/month')
+  @RequirePermissions('calendar:read')
+  async getMonthSchedule(@CurrentUser() user: AuthenticatedUser, @Query('startDate') startDate: string) {
+    return this.appointmentsService.getMonthSchedule(user.tenantId, startDate);
+  }
+
   @Post()
   @RequirePermissions('calendar:create')
   async create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateAppointment) {

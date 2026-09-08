@@ -1,34 +1,28 @@
 import React, { useMemo } from "react";
 import { cn } from "@danta/ui/utils";
-import {
-  CONDITION_COLORS,
-  CONDITION_LABELS,
-  type DentalCondition,
-  type ToothSurface,
-} from "@danta/schemas";
-import type { ToothCondition } from "@danta/schemas";
+import type { ToothConditionConfig, ToothCondition } from "@danta/schemas";
 import {
   MAXILLA_FDI,
   MANDIBLE_FDI,
   PRIMARY_MAXILLA,
   PRIMARY_MANDIBLE,
-  PRIMARY_SCALE,
   buildWedges,
   getToothGeometry,
   toothType,
+  fdiToUniversal,
   type ToothType,
   type Dentition,
+  type ToothSurface,
 } from "@danta/schemas";
-
-const STATUS_STROKE: Record<string, string> = {
-  planned: "#f59e0b",
-  watch: "#f59e0b",
-  existing: "#0f172a",
-};
 
 export interface OdontogramSelection {
   tooth: string;
   surface: ToothSurface | null;
+}
+
+export interface OdontogramModuleTab {
+  type: string;
+  displayName: string;
 }
 
 export interface OdontogramProps {
@@ -37,60 +31,70 @@ export interface OdontogramProps {
   selected?: OdontogramSelection | null;
   onSelect?: (selection: OdontogramSelection) => void;
   dentition?: Dentition;
+  /** Active clinical modules for the current resource; renders module tabs when provided. */
+  moduleTabs?: OdontogramModuleTab[];
+  /** Currently selected module type (drives tooth highlighting + context). */
+  activeModuleType?: string | null;
+  onModuleChange?: (type: string | null) => void;
+  /** When provided, clicking a tooth opens a modal via this callback instead of (or in addition to) onSelect. */
+  onToothClick?: (tooth: string, isMaxilla: boolean) => void;
+  /** Condition configs used for colors/labels in the odontogram. */
+  conditionConfigMap?: Record<string, ToothConditionConfig>;
 }
 
 const GLYPH_R = 11;
 const TOOTH_SPACING = 58;
 
-function fdiToUniversal(fdi: string): number {
-  const n = Number(fdi);
-  const quadrant = Math.floor(n / 10);
-  const position = n % 10;
-  if (quadrant === 1) return 9 - position;
-  if (quadrant === 2) return 8 + position;
-  if (quadrant === 3) return 25 - position;
-  if (quadrant === 4) return 24 + position;
-  return position + 20;
-}
-
 function formatLabel(fdi: string, numbering: "universal" | "fdi"): string {
   if (numbering === "universal") {
-    const u = fdiToUniversal(fdi);
-    return String(Number.isFinite(u) ? u : fdi);
+    const n = Number(fdi);
+    if (!Number.isFinite(n)) return fdi;
+    try {
+      const u = fdiToUniversal(n);
+      return String(u);
+    } catch {
+      return fdi;
+    }
   }
   return fdi;
 }
 
 interface ToothState {
   conditions: ToothCondition[];
-  surfaces: Partial<Record<ToothSurface, { condition: DentalCondition; status: string }>>;
-  wholeTooth: DentalCondition | null;
+  surfaces: Partial<Record<ToothSurface, { condition: string; color: string; status: string }>>;
+  wholeTooth: { condition: string; color: string } | null;
   hasPlanned: boolean;
+  hasModule: boolean;
 }
 
-function deriveState(conditions: ToothCondition[], tooth: string): ToothState {
+const WHOLE_TOOTH_CONDITIONS = ["missing", "implant", "crown", "extraction", "root_canal"];
+
+function deriveState(conditions: ToothCondition[], tooth: string, activeModuleType?: string | null, conditionConfigMap?: Record<string, ToothConditionConfig>): ToothState {
   const list = conditions.filter((c) => c.toothNumber === tooth || c.toothNumber === String(Number(tooth)));
   const surfaces: ToothState["surfaces"] = {};
-  let wholeTooth: DentalCondition | null = null;
+  let wholeTooth: ToothState["wholeTooth"] = null;
   let hasPlanned = false;
+  let hasModule = false;
   for (const c of list) {
     if (c.status === "planned") hasPlanned = true;
+    if (activeModuleType && c.clinicalModule === activeModuleType) hasModule = true;
+    const cfg = conditionConfigMap?.[c.condition];
+    const color = cfg?.color ?? '#64748b';
     for (const s of c.surfaces ?? []) {
-      surfaces[s] = { condition: c.condition as DentalCondition, status: c.status };
+      surfaces[s] = { condition: c.condition, color, status: c.status };
     }
-    const whole: DentalCondition[] = ["missing", "implant", "crown", "extraction", "root_canal"];
-    if (whole.includes(c.condition as DentalCondition) && (c.surfaces?.length ?? 0) === 0) {
-      wholeTooth = c.condition as DentalCondition;
+    if (WHOLE_TOOTH_CONDITIONS.includes(c.condition) && (c.surfaces?.length ?? 0) === 0) {
+      wholeTooth = { condition: c.condition, color };
     }
   }
-  return { conditions: list, surfaces, wholeTooth, hasPlanned };
+  return { conditions: list, surfaces, wholeTooth, hasPlanned, hasModule };
 }
 
-function surfaceFill(surf: { condition: DentalCondition; status: string } | undefined): { fill: string; dashed: boolean; stroke?: string } {
+function surfaceFill(surf: { color: string; status: string } | undefined): { fill: string; dashed: boolean; stroke?: string } {
   if (!surf) return { fill: "transparent", dashed: false };
-  const color = CONDITION_COLORS[surf.condition];
-  if (surf.status === "planned" || surf.status === "watch") {
-    return { fill: color + "33", dashed: true, stroke: STATUS_STROKE[surf.status] };
+  const { color, status } = surf;
+  if (status === "planned" || status === "watch") {
+    return { fill: color + "33", dashed: true, stroke: "#f59e0b" };
   }
   return { fill: color, dashed: false };
 }
@@ -103,7 +107,7 @@ interface ArchLayout {
 function Overlays({ state, cx, cy }: { state: ToothState; cx: number; cy: number }) {
   const { wholeTooth, conditions } = state;
   const nodes: React.ReactNode[] = [];
-  if (wholeTooth === "missing") {
+  if (wholeTooth?.condition === "missing") {
     nodes.push(
       <g key="missing" stroke="#64748b" strokeWidth={2.4} style={{ pointerEvents: "none" }}>
         <line x1={cx - 10} y1={cy - 10} x2={cx + 10} y2={cy + 10} />
@@ -111,7 +115,7 @@ function Overlays({ state, cx, cy }: { state: ToothState; cx: number; cy: number
       </g>
     );
   }
-  if (wholeTooth === "implant") {
+  if (wholeTooth?.condition === "implant") {
     nodes.push(
       <g key="implant" style={{ pointerEvents: "none" }}>
         <circle cx={cx} cy={cy} r={5} fill="#475569" />
@@ -120,7 +124,7 @@ function Overlays({ state, cx, cy }: { state: ToothState; cx: number; cy: number
       </g>
     );
   }
-  if (wholeTooth === "root_canal") {
+  if (wholeTooth?.condition === "root_canal") {
     nodes.push(
       <g key="rct" stroke="#1d4ed8" strokeWidth={1.6} fill="none" style={{ pointerEvents: "none" }}>
         <line x1={cx - 4} y1={cy - 6} x2={cx - 4} y2={cy + 6} />
@@ -168,7 +172,7 @@ function Glyph({ state, cx, cy }: { state: ToothState; cx: number; cy: number })
         );
       })}
       {state.wholeTooth && (
-        <circle cx={cx} cy={cy} r={GLYPH_R * 0.38} fill={CONDITION_COLORS[state.wholeTooth]} opacity={0.85} />
+        <circle cx={cx} cy={cy} r={GLYPH_R * 0.38} fill={state.wholeTooth.color} opacity={0.85} />
       )}
       {state.hasPlanned && !state.wholeTooth && (
         <circle cx={cx} cy={cy} r={GLYPH_R + 1.5} fill="none" stroke="#f59e0b" strokeWidth={1} strokeDasharray="2 2" />
@@ -185,7 +189,9 @@ function Tooth({
   numbering,
   isSelected,
   onSelect,
+  onToothClick,
   dentition,
+  conditionConfigMap,
 }: {
   fdi: string;
   isMaxilla: boolean;
@@ -194,22 +200,30 @@ function Tooth({
   numbering: "universal" | "fdi";
   isSelected: boolean;
   onSelect?: (s: OdontogramSelection) => void;
+  onToothClick?: (tooth: string, isMaxilla: boolean) => void;
   dentition: Dentition;
+  conditionConfigMap: Record<string, ToothConditionConfig>;
 }) {
-  const scale = dentition === "primary" ? PRIMARY_SCALE : 1;
+  const scale = dentition === "primary" ? 0.78 : 1;
   const baseY = isMaxilla ? 60 : 300;
   const crownCenterY = isMaxilla ? baseY + 8 : baseY + 36;
   const glyphY = isMaxilla ? baseY + 96 : baseY - 58;
   const labelY = isMaxilla ? baseY + 124 : baseY - 78;
 
   const announce = state.conditions.length
-    ? `Tooth ${formatLabel(fdi, numbering)}: ${state.conditions.map((c) => `${CONDITION_LABELS[c.condition as DentalCondition] ?? c.condition} (${c.status})`).join(", ")}`
+    ? `Tooth ${formatLabel(fdi, numbering)}: ${state.conditions.map((c) => `${conditionConfigMap[c.condition]?.name ?? c.condition} (${c.status})`).join(", ")}`
     : `Tooth ${formatLabel(fdi, numbering)}, no findings`;
 
   const handleClick = (e: React.MouseEvent<SVGGElement>) => {
     const target = e.target as SVGElement;
     const surface = (target.dataset?.surface as ToothSurface | undefined) ?? null;
-    onSelect?.({ tooth: fdi, surface });
+    if (surface) {
+      onSelect?.({ tooth: fdi, surface });
+    } else if (onToothClick) {
+      onToothClick(fdi, isMaxilla);
+    } else {
+      onSelect?.({ tooth: fdi, surface: null });
+    }
   };
 
   return (
@@ -231,11 +245,14 @@ function Tooth({
       )}
       transform={`translate(${layoutX}, 0)`}
     >
-      <g transform={`translate(20, ${crownCenterY}), scale(${scale}), ${isMaxilla ? "" : "translate(0, 64), scale(1,-1)"}`}>
+      <g transform={`translate(20, ${crownCenterY}) scale(${scale})${isMaxilla ? '' : ' translate(0, 64) scale(1, -1)'}`}>
         <ToothSilhouette fdi={fdi} isMaxilla={isMaxilla} scale={1} />
         <Overlays state={state} cx={20} cy={isMaxilla ? 20 : 44} />
       </g>
       <Glyph state={state} cx={32} cy={glyphY} />
+      {state.hasModule && (
+        <circle cx={32} cy={glyphY} r={GLYPH_R + 5} fill="none" stroke="#0d9488" strokeWidth={1.5} opacity={0.9} />
+      )}
       <text
         x={32}
         y={labelY}
@@ -251,13 +268,16 @@ function Tooth({
   );
 }
 
-function ArchRow({ layout, conditions, numbering, selected, onSelect, dentition }: {
+function ArchRow({ layout, conditions, numbering, selected, onSelect, dentition, activeModuleType, onToothClick, conditionConfigMap }: {
   layout: ArchLayout;
   conditions: ToothCondition[];
   numbering: "universal" | "fdi";
   selected?: OdontogramSelection | null;
   onSelect?: (s: OdontogramSelection) => void;
   dentition: Dentition;
+  activeModuleType?: string | null;
+  onToothClick?: (tooth: string, isMaxilla: boolean) => void;
+  conditionConfigMap: Record<string, ToothConditionConfig>;
 }) {
   const { teeth, isMaxilla } = layout;
   const totalWidth = (teeth.length - 1) * TOOTH_SPACING + 64;
@@ -272,11 +292,13 @@ function ArchRow({ layout, conditions, numbering, selected, onSelect, dentition 
             fdi={fdi}
             isMaxilla={isMaxilla}
             layoutX={x}
-            state={deriveState(conditions, fdi)}
+            state={deriveState(conditions, fdi, activeModuleType, conditionConfigMap)}
             numbering={numbering}
             isSelected={selected?.tooth === fdi}
             onSelect={onSelect}
+            onToothClick={onToothClick}
             dentition={dentition}
+            conditionConfigMap={conditionConfigMap}
           />
         );
       })}
@@ -284,7 +306,7 @@ function ArchRow({ layout, conditions, numbering, selected, onSelect, dentition 
   );
 }
 
-export function Odontogram({ conditions, numbering, selected, onSelect, dentition = "permanent" }: OdontogramProps) {
+export function Odontogram({ conditions, numbering, selected, onSelect, dentition = "permanent", moduleTabs, activeModuleType, onModuleChange, onToothClick, conditionConfigMap = {} }: OdontogramProps) {
   const layouts: ArchLayout[] = useMemo(() => {
     if (dentition === "primary") {
       return [
@@ -300,38 +322,57 @@ export function Odontogram({ conditions, numbering, selected, onSelect, dentitio
 
   return (
     <div className="space-y-2">
-      <svg viewBox="0 0 1000 480" className="w-full select-none" role="img" aria-label="Dental odontogram">
-        <text x={24} y={34} fontSize={13} fontWeight={700} fill="#334155">Maxilla</text>
-        <text x={24} y={460} fontSize={13} fontWeight={700} fill="#334155">Mandible</text>
-        <line x1={500} y1={40} x2={500} y2={150} stroke="#e2e8f0" strokeDasharray="4 4" />
-        <line x1={500} y1={340} x2={500} y2={445} stroke="#e2e8f0" strokeDasharray="4 4" />
-        {layouts.map((layout, i) => (
-          <g key={i} transform={`translate(0, ${i === 0 ? 0 : 200})`}>
-            <ArchRow
-              layout={layout}
-              conditions={conditions}
-              numbering={numbering}
-              selected={selected}
-              onSelect={onSelect}
-              dentition={dentition}
-            />
-          </g>
-        ))}
-      </svg>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-2">
-        {(Object.keys(CONDITION_LABELS) as DentalCondition[]).map((condition) => (
-          <span key={condition} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: CONDITION_COLORS[condition] }} />
-            {CONDITION_LABELS[condition]}
-          </span>
-        ))}
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-amber-500" />
-          Planned
-        </span>
+      {moduleTabs && moduleTabs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-2">
+          <span className="text-xs font-medium text-muted-foreground">Module:</span>
+          <button
+            type="button"
+            onClick={() => onModuleChange?.(null)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              !activeModuleType ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70",
+            )}
+          >
+            All
+          </button>
+          {moduleTabs.map((tab) => (
+            <button
+              key={tab.type}
+              type="button"
+              onClick={() => onModuleChange?.(tab.type)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                activeModuleType === tab.type ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70",
+              )}
+            >
+              {tab.displayName}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-lg border bg-background">
+        <svg viewBox="0 0 1000 480" className="w-full select-none" role="img" aria-label="Dental odontogram">
+          <text x={24} y={34} fontSize={13} fontWeight={700} fill="#334155">Maxilla</text>
+          <text x={24} y={460} fontSize={13} fontWeight={700} fill="#334155">Mandible</text>
+          <line x1={500} y1={40} x2={500} y2={150} stroke="#e2e8f0" strokeDasharray="4 4" />
+          <line x1={500} y1={340} x2={500} y2={445} stroke="#e2e8f0" strokeDasharray="4 4" />
+          {layouts.map((layout, i) => (
+            <g key={i} transform={`translate(0, ${i === 0 ? 0 : 200})`}>
+              <ArchRow
+                layout={layout}
+                conditions={conditions}
+                numbering={numbering}
+                selected={selected}
+                onSelect={onSelect}
+                dentition={dentition}
+                activeModuleType={activeModuleType}
+                onToothClick={onToothClick}
+                conditionConfigMap={conditionConfigMap}
+              />
+            </g>
+          ))}
+        </svg>
       </div>
     </div>
   );
 }
-
-export { CONDITION_COLORS };

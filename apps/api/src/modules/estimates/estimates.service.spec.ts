@@ -26,8 +26,8 @@ describe('EstimatesService', () => {
     patientId: 'patient-1',
     status: 'presented',
     validUntil: null,
-    items: [{ id: 'ei-1', planItemId: 'plan-item-1' }],
-    approvals: [],
+    estimate_items: [{ id: 'ei-1', planItemId: 'plan-item-1' }],
+    estimate_approvals: [],
   };
 
   beforeEach(() => {
@@ -64,7 +64,7 @@ describe('EstimatesService', () => {
       tenantId: 'tenant-1',
       patientId: 'patient-1',
       providerId: null,
-      items: [
+      treatment_plan_items: [
         { id: 'pi-1', serviceId: null, treatmentCode: 'D2392', description: 'Composite', toothNumber: '16', surfaces: ['occlusal'], quantity: 1, unitPrice: 220, discount: 0, taxRate: 0, status: 'planned' },
         { id: 'pi-2', serviceId: null, treatmentCode: 'D2740', description: 'Crown', toothNumber: '17', surfaces: [], quantity: 1, unitPrice: 1250, discount: 0, taxRate: 0, status: 'accepted' },
         { id: 'pi-3', serviceId: null, treatmentCode: 'D7140', description: 'Extraction', toothNumber: '18', surfaces: [], quantity: 1, unitPrice: 250, discount: 0, taxRate: 0, status: 'completed' },
@@ -73,12 +73,12 @@ describe('EstimatesService', () => {
 
     await service.createFromPlan('tenant-1', 'user-1', { treatmentPlanId: 'plan-1' });
     const createCall = txMock.estimate.create.mock.calls[0][0];
-    const createdItems = createCall.data.items.create;
+    const createdItems = createCall.data.estimate_items.create;
     expect(createdItems).toHaveLength(2); // completed item excluded
   });
 
   it('rejects plan estimates when nothing is plannable', async () => {
-    mockPrisma.treatmentPlan.findFirst.mockResolvedValue({ id: 'plan-1', tenantId: 'tenant-1', patientId: 'patient-1', providerId: null, items: [] });
+    mockPrisma.treatmentPlan.findFirst.mockResolvedValue({ id: 'plan-1', tenantId: 'tenant-1', patientId: 'patient-1', providerId: null, treatment_plan_items: [] });
 
     await expect(service.createFromPlan('tenant-1', 'user-1', { treatmentPlanId: 'plan-1' })).rejects.toThrow(BadRequestException);
   });

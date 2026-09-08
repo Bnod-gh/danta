@@ -5,7 +5,7 @@ import { PatientDetailPage } from '../../patients/-patient-detail-page.tsx';
 import { InvoicesPage } from '../../invoices/-invoices-page.tsx';
 import { EstimatesPage } from '../../estimates/-estimates-page.tsx';
 import { WaitlistPage } from '../../waitlist/-waitlist-page.tsx';
-import { PatientClinicalPage } from '../../patients/-patient-clinical-page.tsx';
+import { PatientClinicalPage } from '../../patients/$id/clinical/-patient-clinical-page.tsx';
 import { SchedulePage } from '../../schedule/-schedule-page.tsx';
 import { AppointmentsPage } from '../../appointments/-appointments-page.tsx';
 import { AppointmentTypesPage } from '../../appointment-types/-appointment-types-page.tsx';

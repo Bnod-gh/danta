@@ -80,7 +80,10 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch {
-        if (typeof window !== 'undefined') {
+        // Only redirect to login for authenticated calls that expired mid-session.
+        // A 401 on the initial /auth/me probe just means "not logged in" — redirecting
+        // there would cause an infinite reload loop.
+        if (typeof window !== 'undefined' && !url.includes('/auth/me')) {
           window.location.href = '/login';
         }
         return Promise.reject(new Error('Your session has expired. Please sign in again.'));
@@ -108,7 +111,10 @@ apiClient.interceptors.response.use(
 );
 
 function extractReadableMessage(error: AxiosError, fallback: string): string {
-  const data = error.response?.data as { message?: unknown; error?: string } | string | undefined;
+  const data = error.response?.data as { message?: unknown; error?: string } | string | Blob | undefined;
+  if (data instanceof Blob) {
+    return fallback;
+  }
   if (typeof data === 'string' && data.trim()) return data.trim();
   if (data && typeof data === 'object') {
     if (typeof data.message === 'string' && data.message.trim()) return data.message.trim();

@@ -56,6 +56,7 @@ const navItems: Array<{
     children: [
       { label: 'Clinical Notes', to: '/clinical-notes', permission: 'clinical' },
       { label: 'Dental Chart', to: '/dental-charts', permission: 'clinical' },
+      { label: 'Tooth Conditions', to: '/tooth-conditions', permission: 'clinical' },
       { label: 'Treatment Plans', to: '/treatment-plans', permission: 'clinical' },
       { label: 'Periodontal', to: '/periodontal-records', permission: 'clinical' },
       { label: 'Templates', to: '/templates', permission: 'clinical' },
@@ -122,6 +123,7 @@ const navItems: Array<{
       { label: 'Providers', to: '/providers', permission: 'practice' },
       { label: 'Chairs', to: '/chairs', permission: 'practice' },
       { label: 'Users', to: '/users', permission: 'practice' },
+      { label: 'Tooth Conditions', to: '/tooth-conditions', permission: 'practice' },
     ],
   },
   {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CONDITION_CDT_MAP,
   fdiToUniversal,
   MANDIBLE_RENDER_ORDER,
   MAXILLA_RENDER_ORDER,
@@ -50,14 +49,5 @@ describe('render order', () => {
     expect(MAXILLA_RENDER_ORDER[15]).toBe(16);
     expect(MANDIBLE_RENDER_ORDER[0]).toBe(32);
     expect(MANDIBLE_RENDER_ORDER[15]).toBe(17);
-  });
-});
-
-describe('condition CDT map', () => {
-  it('maps treatable conditions and skips restorative-history ones', () => {
-    expect(CONDITION_CDT_MAP.caries?.code).toBe('D2392');
-    expect(CONDITION_CDT_MAP.implant?.code).toBe('D6010');
-    expect(CONDITION_CDT_MAP.filling).toBeNull();
-    expect(CONDITION_CDT_MAP.missing).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { apiDownload, apiGet, apiPost, apiPut, apiUpload } from './request';
+import { apiDelete, apiDownload, apiGet, apiPost, apiPut, apiUpload } from './request';
 import type { ImagingImage, ImagingStudy } from '@danta/schemas';
 
 export type StudyRow = ImagingStudy & {
@@ -73,6 +73,10 @@ export async function uploadImage(file: File | Blob, data: { imagingStudyId: str
 
 export async function downloadImageOriginal(id: string): Promise<Blob> {
   return apiDownload(`/imaging-images/${id}/original`);
+}
+
+export async function deleteImage(id: string): Promise<{ deleted: boolean }> {
+  return apiDelete(`/imaging-images/${id}`);
 }
 
 export async function downloadImageThumbnail(id: string): Promise<Blob> {

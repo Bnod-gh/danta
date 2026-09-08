@@ -1,0 +1,110 @@
+// This file documents the schema extensions needed for clinical modules and scheduling resources.
+// These models should be added to packages/database/prisma/schema.prisma
+
+// ============================================================================
+// Clinical Modules - System-wide module definitions
+// ============================================================================
+
+model ClinicalModule {
+  id           String                      @id @default(uuid()) @db.Uuid
+  type         String                      @db.VarChar(100) // "odontogram_diagnosis", "odontogram_restorative", etc.
+  name         String                      @db.VarChar(255) // "Diagnosis", "Restorative", etc.
+  displayName  String                      @db.VarChar(255)
+  description  String?                     @db.Text
+  category     String                      @db.VarChar(50) // "odontogram", "periodontal", "orthodontic", etc.
+  order        Int                         @default(0)
+  config       Json                        @default("{}")  // Module-specific configuration
+  createdAt    DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime                    @updatedAt @db.Timestamptz(6)
+  
+  // Relations
+  resourceModules SchedulingResourceModule[]
+
+  @@unique([type])
+  @@index([category])
+  @@map("clinical_modules")
+}
+
+// ============================================================================
+// Scheduling Resources - Tenant-specific clinical resources
+// ============================================================================
+
+model SchedulingResource {
+  id                String                      @id @default(uuid()) @db.Uuid
+  tenantId          String                      @db.Uuid
+  type              String                      @db.VarChar(100) // "odontogram", "periodontal_chart", "imaging", etc.
+  name              String                      @db.VarChar(255)
+  description       String?                     @db.Text
+  active            Boolean                     @default(true)
+  settings          Json                        @default("{}")  // Resource-specific settings
+  createdAt         DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                    @updatedAt @db.Timestamptz(6)
+  
+  // Relations
+  modules           SchedulingResourceModule[]
+
+  @@unique([tenantId, type])
+  @@index([tenantId, active])
+  @@map("scheduling_resources")
+}
+
+// ============================================================================
+// Scheduling Resource Modules - Association between resources and modules
+// ============================================================================
+
+model SchedulingResourceModule {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  schedulingResourceId String                  @db.Uuid
+  clinicalModuleId    String                  @db.Uuid
+  active              Boolean                 @default(true)
+  order               Int                     @default(0)
+  settings            Json                    @default("{}")  // Module-specific config for this resource
+  createdAt           DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime                @updatedAt @db.Timestamptz(6)
+  
+  // Relations
+  schedulingResource  SchedulingResource      @relation(fields: [schedulingResourceId], references: [id], onDelete: Cascade)
+  clinicalModule      ClinicalModule          @relation(fields: [clinicalModuleId], references: [id], onDelete: Cascade)
+
+  @@unique([schedulingResourceId, clinicalModuleId])
+  @@index([schedulingResourceId])
+  @@index([clinicalModuleId])
+  @@map("scheduling_resource_modules")
+}
+
+// ============================================================================
+// Extend ToothCondition to support clinical modules
+// ============================================================================
+
+// Add to existing ToothCondition model:
+//   clinicalModule    String?          @db.VarChar(100)  // Reference to ClinicalModule.type
+//   diagnosis         String?          @db.Text           // Free text diagnosis
+//   treatmentPlan     String?          @db.Text           // Free text treatment plan
+//   inProgress        Boolean          @default(false)
+//   completedAt       DateTime?        @db.Timestamptz(6)
+
+// ============================================================================
+// Extend TenantSettings (JSON key-value store) to include:
+// ============================================================================
+
+// Key: "clinical:modules:dental_chart"
+// Value: {
+//   active: boolean,
+//   modules: [
+//     { type: "odontogram_diagnosis", active: true, order: 1 },
+//     { type: "odontogram_restorative", active: true, order: 2 },
+//     ...
+//   ]
+// }
+
+// Key: "clinical:resources"
+// Value: {
+//   resources: [
+//     {
+//       type: "odontogram",
+//       name: "Dental Chart",
+//       active: true,
+//       modules: [...]
+//     }
+//   ]
+// }

@@ -697,6 +697,12 @@ model ToothCondition {
   scope                                          String           @default("tooth") @db.VarChar(20)
   dentition                                      String           @default("permanent") @db.VarChar(20)
   procedureCodeId                                String?          @db.Uuid
+  clinicalModule                                 String?          @db.VarChar(100)
+  clinicalStatus                                 String?          @db.VarChar(50)
+  diagnosis                                      String?          @db.Text
+  treatmentPlan                                  String?          @db.Text
+  inProgress                                     Boolean          @default(false)
+  completedAt                                    DateTime?        @db.Timestamptz(6)
   users_tooth_conditions_createdByUserIdTousers  User?            @relation("tooth_conditions_createdByUserIdTousers", fields: [createdByUserId], references: [id])
   dentalChart                                    DentalChart      @relation(fields: [dentalChartId], references: [id], onDelete: Cascade)
   procedure_codes                                procedure_codes? @relation(fields: [procedureCodeId], references: [id])
@@ -710,7 +716,32 @@ model ToothCondition {
   @@index([tenantId, scope], map: "tooth_conditions_scope_idx")
   @@index([tenantId, status])
   @@index([tenantId, toothNumber])
+  @@index([tenantId, clinicalModule])
   @@map("tooth_conditions")
+}
+
+model ToothConditionConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  category    String   @db.VarChar(50)  @default("general")
+  color       String   @db.VarChar(7)   @default("#3b82f6")
+  surfaces    String[] @default([])
+  cdtCode     String?  @db.VarChar(20)
+  cdtDescription String? @db.VarChar(255)
+  cdtFee      Decimal? @db.Decimal(10, 2)
+  icon        String?  @db.VarChar(50)
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active])
+  @@index([tenantId, category])
+  @@map("tooth_condition_configs")
 }
 
 model TreatmentHistory {
@@ -1557,6 +1588,59 @@ model waitlist {
   @@index([tenantId, patientId])
   @@index([tenantId, preferredStartTime])
   @@index([tenantId, status])
+}
+
+model ClinicalModule {
+  id           String                      @id @default(uuid()) @db.Uuid
+  type         String                      @db.VarChar(100)
+  name         String                      @db.VarChar(255)
+  displayName  String                      @db.VarChar(255)
+  description  String?                     @db.Text
+  category     String                      @db.VarChar(50)
+  order        Int                         @default(0)
+  config       Json                        @default("{}")
+  createdAt    DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime                    @updatedAt @db.Timestamptz(6)
+  resourceModules SchedulingResourceModule[]
+
+  @@unique([type])
+  @@index([category])
+  @@map("clinical_modules")
+}
+
+model SchedulingResource {
+  id                String                      @id @default(uuid()) @db.Uuid
+  tenantId          String                      @db.Uuid
+  type              String                      @db.VarChar(100)
+  name              String                      @db.VarChar(255)
+  description       String?                     @db.Text
+  active            Boolean                     @default(true)
+  settings          Json                        @default("{}")
+  createdAt         DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                    @updatedAt @db.Timestamptz(6)
+  modules           SchedulingResourceModule[]
+
+  @@unique([tenantId, type])
+  @@index([tenantId, active])
+  @@map("scheduling_resources")
+}
+
+model SchedulingResourceModule {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  schedulingResourceId String                  @db.Uuid
+  clinicalModuleId    String                  @db.Uuid
+  active              Boolean                 @default(true)
+  order               Int                     @default(0)
+  settings            Json                    @default("{}")
+  createdAt           DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime                @updatedAt @db.Timestamptz(6)
+  schedulingResource  SchedulingResource      @relation(fields: [schedulingResourceId], references: [id], onDelete: Cascade)
+  clinicalModule      ClinicalModule          @relation(fields: [clinicalModuleId], references: [id], onDelete: Cascade)
+
+  @@unique([schedulingResourceId, clinicalModuleId])
+  @@index([schedulingResourceId])
+  @@index([clinicalModuleId])
+  @@map("scheduling_resource_modules")
 }
 
 enum Environment {

@@ -24,3 +24,32 @@ export const UpdateDentalChartSchema = z.object({
 });
 
 export type UpdateDentalChart = z.infer<typeof UpdateDentalChartSchema>;
+
+export const GeneratePlanFromChartSchema = z.object({
+  providerId: z.string().uuid().optional(),
+});
+
+export type GeneratePlanFromChart = z.infer<typeof GeneratePlanFromChartSchema>;
+
+export const ChartPlanLineSchema = z.object({
+  condition: z.string(),
+  label: z.string(),
+  toothNumber: z.string(),
+  surface: z.string().nullable().optional(),
+  code: z.string(),
+  description: z.string(),
+  defaultFee: z.number(),
+});
+
+export type ChartPlanLine = z.infer<typeof ChartPlanLineSchema>;
+
+export const GeneratePlanFromChartResponseSchema = z.object({
+  plan: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+  }),
+  items: z.array(ChartPlanLineSchema),
+  estimatedTotal: z.number(),
+});
+
+export type GeneratePlanFromChartResponse = z.infer<typeof GeneratePlanFromChartResponseSchema>;

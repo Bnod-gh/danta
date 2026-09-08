@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuditService } from '../audit/audit.service';
 import { InvitationsService } from '../invitations/invitations.service';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 import { UnauthorizedException } from '@nestjs/common';
 import { Request, Response } from 'express';
 
@@ -36,6 +37,7 @@ describe('AuthController', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: AuditService, useValue: mockAuditService },
         { provide: InvitationsService, useValue: mockInvitationsService },
+        { provide: ApiKeysService, useValue: { validateKey: jest.fn() } },
       ],
     }).compile();
 

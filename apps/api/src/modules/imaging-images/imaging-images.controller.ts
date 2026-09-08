@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, UploadedFile, UseInterceptors, Res, BadRequestException, StreamableFile } from '@nestjs/common';
-import { createReadStream } from 'fs';
-import { join } from 'path';
-import { env } from '@danta/config';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete, UploadedFile, UseInterceptors, Res, BadRequestException, StreamableFile, Inject } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ImagingImagesService } from './imaging-images.service';
+import { STORAGE_PROVIDER } from '../../storage/storage.module';
+import { StorageProvider } from '../../storage/storage.interface';
 import type { CreateImagingImage, UpdateImagingImage } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -14,16 +13,19 @@ import { Response } from 'express';
 @Controller('imaging-images')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ImagingImagesController {
-  constructor(private readonly imagingImagesService: ImagingImagesService) {}
+  constructor(
+    private readonly imagingImagesService: ImagingImagesService,
+    @Inject(STORAGE_PROVIDER) private readonly storageProvider: StorageProvider,
+  ) {}
 
   @Get('/:id/original')
   @RequirePermissions('imaging:read')
   async getOriginal(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Res() res: Response) {
     const result = await this.imagingImagesService.getOriginal(user.tenantId, id);
     res.set('Content-Type', result.mimeType);
-    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(result.fileName)}"`);
-    const filePath = join(process.cwd(), env.storageLocalPath, result.url.replace('/storage/', ''));
-    return new StreamableFile(createReadStream(filePath), { type: result.mimeType });
+    res.set('Content-Disposition', `inline; filename="${id}_${result.fileName}"`);
+    const fileStream = await this.storageProvider.download(result.url.replace('/storage/', ''));
+    return new StreamableFile(fileStream, { type: result.mimeType });
   }
 
   @Get('/:id/thumbnail')
@@ -31,9 +33,9 @@ export class ImagingImagesController {
   async getThumbnail(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Res() res: Response) {
     const result = await this.imagingImagesService.getThumbnail(user.tenantId, id);
     res.set('Content-Type', result.mimeType);
-    res.set('Content-Disposition', `inline; filename="${encodeURIComponent(result.fileName)}"`);
-    const filePath = join(process.cwd(), env.storageLocalPath, result.url.replace('/storage/', ''));
-    return new StreamableFile(createReadStream(filePath), { type: result.mimeType });
+    res.set('Content-Disposition', `inline; filename="${id}_${result.fileName}"`);
+    const fileStream = await this.storageProvider.download(result.url.replace('/storage/', ''));
+    return new StreamableFile(fileStream, { type: result.mimeType });
   }
 
   @Post('upload')

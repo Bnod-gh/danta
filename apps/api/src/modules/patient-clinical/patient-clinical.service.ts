@@ -110,7 +110,7 @@ export class PatientClinicalService {
         resourceId: c.id,
         title: `${labelCondition(c.condition)} — ${c.status}`,
         detail: c.notes ?? undefined,
-        metadata: { surfaces: c.surfaces, severity: c.severity, supersedesId: c.supersedesId },
+        metadata: { surfaces: c.surfaces, severity: c.severity, supersedesId: c.supersedesId, clinicalModule: c.clinicalModule ?? undefined },
       })),
       ...treatments
         .map((t) => ({
@@ -208,7 +208,7 @@ export class PatientClinicalService {
         resourceType: 'tooth_condition', resourceId: c.id,
         title: `Tooth ${c.toothNumber} — ${labelCondition(c.condition)} (${c.status})`,
         detail: c.notes ?? undefined,
-        metadata: { surfaces: c.surfaces, severity: c.severity, supersedesId: c.supersedesId },
+        metadata: { surfaces: c.surfaces, severity: c.severity, supersedesId: c.supersedesId, clinicalModule: c.clinicalModule ?? undefined },
       }))));
     }
 

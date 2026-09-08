@@ -1,10 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { Inject } from '@nestjs/common';
+import { STORAGE_PROVIDER } from '../../storage/storage.module';
+import { StorageProvider } from '../../storage/storage.interface';
 
 @Injectable()
 export class PatientDocumentsService {
-  constructor(private readonly prisma: PrismaService, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+    @Inject(STORAGE_PROVIDER) private readonly storageProvider: StorageProvider,
+  ) {}
 
   async findAll(tenantId: string, patientId: string) {
     return this.prisma.patientDocument.findMany({
@@ -21,6 +28,39 @@ export class PatientDocumentsService {
       tenantId,
       userId,
       action: 'patient-document.create',
+      resourceType: 'patient-document',
+      resourceId: document.id,
+      result: 'success',
+    });
+
+    return document;
+  }
+
+  async upload(
+    tenantId: string,
+    patientId: string,
+    userId: string,
+    file: Buffer,
+    metadata: { fileName: string; mimeType: string; size: number; storageKey: string },
+  ) {
+    await this.storageProvider.upload(metadata.storageKey, file, metadata.mimeType);
+
+    const document = await this.prisma.patientDocument.create({
+      data: {
+        tenantId,
+        patientId,
+        name: metadata.fileName,
+        mimeType: metadata.mimeType,
+        size: metadata.size,
+        storageKey: metadata.storageKey,
+        uploadedBy: userId,
+      },
+    });
+
+    await this.auditService.log({
+      tenantId,
+      userId,
+      action: 'patient-document.upload',
       resourceType: 'patient-document',
       resourceId: document.id,
       result: 'success',

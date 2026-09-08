@@ -1,12 +1,20 @@
 import { z } from "zod";
 import {
-  DentalConditionSchema,
   ToothSurfaceSchema,
-  universalToFdi,
+  ClinicalStatusSchema,
+  FindingSeveritySchema,
+  DentitionSchema,
+  FindingScopeSchema,
+  ToothNumberSchema,
+  isValidToothNumber,
+  FindingSeverity,
+  Dentition,
+  FindingScope,
 } from "./dental-charting";
 
-/** Lifecycle of a clinical finding. `superseded` rows are amendments kept for history;
- *  `removed` rows are soft deletions so point-in-time odontograms stay reconstructable. */
+export { FindingSeveritySchema, DentitionSchema, FindingScopeSchema, ToothNumberSchema, isValidToothNumber };
+export type { FindingSeverity, Dentition, FindingScope };
+
 export const ToothFindingStatusSchema = z.enum([
   "planned",
   "existing",
@@ -17,39 +25,7 @@ export const ToothFindingStatusSchema = z.enum([
 ]);
 export type ToothFindingStatus = z.infer<typeof ToothFindingStatusSchema>;
 
-/** Statuses a finding can be created with; terminal states are reached via transitions. */
 export const ToothFindingInitialStatusSchema = z.enum(["planned", "existing", "watch"]);
-
-export const FindingSeveritySchema = z.enum(["mild", "moderate", "severe"]);
-export type FindingSeverity = z.infer<typeof FindingSeveritySchema>;
-
-export const DentitionSchema = z.enum(["permanent", "primary"]);
-export type Dentition = z.infer<typeof DentitionSchema>;
-
-export const FindingScopeSchema = z.enum(["tooth", "mouth"]);
-export type FindingScope = z.infer<typeof FindingScopeSchema>;
-
-const FDI_PERMANENT = /^(1[1-8]|2[1-8]|3[1-8]|4[1-8])$/;
-const FDI_PRIMARY = /^(5[1-5]|6[1-5]|7[1-5]|8[1-5])$/;
-
-/** Accepts an FDI number (permanent or primary, governed by `dentition`) or a
- *  Universal number (1-32). Default validates permanent only for backward compat. */
-export function isValidToothNumber(value: string, dentition: Dentition = "permanent"): boolean {
-  if (!/^\d{1,2}$/.test(value)) return false;
-  if (value.length === 2) {
-    return dentition === "primary" ? FDI_PRIMARY.test(value) : FDI_PERMANENT.test(value);
-  }
-  try {
-    universalToFdi(Number(value));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export const ToothNumberSchema = z
-  .string()
-  .refine((v) => isValidToothNumber(v), "Tooth must be a valid FDI number (e.g. 16) or Universal number (1-32)");
 
 export const ToothConditionSchema = z.object({
   id: z.string().uuid(),
@@ -59,7 +35,6 @@ export const ToothConditionSchema = z.object({
   condition: z.string(),
   scope: FindingScopeSchema.default("tooth"),
   dentition: DentitionSchema.default("permanent"),
-  /** @deprecated legacy single-surface mirror of surfaces[0] */
   surface: z.string().nullable().optional(),
   surfaces: z.array(ToothSurfaceSchema),
   severity: FindingSeveritySchema.nullable().optional(),
@@ -73,32 +48,40 @@ export const ToothConditionSchema = z.object({
   removedAt: z.date().nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  clinicalModule: z.string().nullable().optional(),
+  clinicalStatus: ClinicalStatusSchema.nullable().optional(),
+  diagnosis: z.string().nullable().optional(),
+  treatmentPlan: z.string().nullable().optional(),
+  inProgress: z.boolean().optional(),
+  completedAt: z.date().nullable().optional(),
 });
-
 export type ToothCondition = z.infer<typeof ToothConditionSchema>;
 
 export const CreateToothConditionSchema = z.object({
   dentalChartId: z.string().uuid(),
   toothNumber: ToothNumberSchema.optional(),
-  condition: DentalConditionSchema,
+  condition: z.string().min(1).max(50),
   scope: FindingScopeSchema.default("tooth"),
   dentition: DentitionSchema.default("permanent"),
-  /** Structured multi-surface finding. */
   surfaces: z.array(ToothSurfaceSchema).max(6).optional(),
-  /** @deprecated use surfaces[] */
   surface: ToothSurfaceSchema.optional(),
   severity: FindingSeveritySchema.optional(),
   status: ToothFindingInitialStatusSchema.default("planned"),
   notes: z.string().max(500).optional(),
   providerId: z.string().uuid().optional(),
   procedureCodeId: z.string().uuid().optional(),
+  clinicalModule: z.string().max(100).optional(),
+  clinicalStatus: ClinicalStatusSchema.optional(),
+  diagnosis: z.string().optional(),
+  treatmentPlan: z.string().optional(),
+  inProgress: z.boolean().optional(),
+  completedAt: z.date().optional(),
 });
 export type CreateToothCondition = z.infer<typeof CreateToothConditionSchema>;
 
-/** Batch apply: fan a single treatment across many teeth in one call. */
 export const BatchCreateToothConditionSchema = z.object({
   dentalChartId: z.string().uuid(),
-  condition: DentalConditionSchema,
+  condition: z.string().min(1).max(50),
   dentition: DentitionSchema.default("permanent"),
   scope: FindingScopeSchema.default("tooth"),
   teeth: z.array(ToothNumberSchema).min(1).max(32),
@@ -108,22 +91,24 @@ export const BatchCreateToothConditionSchema = z.object({
   notes: z.string().max(500).optional(),
   providerId: z.string().uuid().optional(),
   procedureCodeId: z.string().uuid().optional(),
+  clinicalModule: z.string().max(100).optional(),
 });
 export type BatchCreateToothCondition = z.infer<typeof BatchCreateToothConditionSchema>;
 
-/**
- * Editing a finding replaces it with an amending row (`supersedesId`) whenever it has
- * already been resolved, so finalized clinical history is never rewritten silently.
- */
 export const UpdateToothConditionSchema = z.object({
-  condition: DentalConditionSchema.optional(),
+  condition: z.string().min(1).max(50).optional(),
   surfaces: z.array(ToothSurfaceSchema).max(6).optional(),
   surface: ToothSurfaceSchema.optional(),
   severity: FindingSeveritySchema.optional(),
   status: z.enum(["planned", "existing", "watch", "resolved"]).optional(),
   notes: z.string().max(500).nullable().optional(),
   providerId: z.string().uuid().nullable().optional(),
-  /** Optimistic concurrency token: rejects the write when another clinician saved first. */
   expectedUpdatedAt: z.string().datetime().optional(),
+  clinicalModule: z.string().max(100).optional(),
+  clinicalStatus: ClinicalStatusSchema.optional(),
+  diagnosis: z.string().nullable().optional(),
+  treatmentPlan: z.string().nullable().optional(),
+  inProgress: z.boolean().optional(),
+  completedAt: z.date().nullable().optional(),
 });
 export type UpdateToothCondition = z.infer<typeof UpdateToothConditionSchema>;

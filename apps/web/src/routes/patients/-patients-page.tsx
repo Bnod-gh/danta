@@ -43,6 +43,8 @@ import { Link } from '@tanstack/react-router';
 import type { Patient } from '@danta/schemas';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '../../lib/api/request';
+import { tenantPath } from '../../lib/tenant-routing';
+import { useAuth } from '../../lib/auth-context';
 import { archivePatient, restorePatient, updatePatient } from '../../lib/api/patient-clinical';
 import { Label } from '@danta/ui/label';
 
@@ -191,6 +193,7 @@ function Field({
 
 export function PatientsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -329,7 +332,7 @@ export function PatientsPage() {
                 <TableRow key={patient.id}>
                   <TableCell>
                     <Link
-                      to={`/patients/${patient.id}`}
+                      to={tenantPath(user?.tenantId, `/patients/${patient.id}`)}
                       className="text-primary hover:underline font-medium"
                     >
                       {patient.firstName} {patient.lastName}
@@ -350,7 +353,7 @@ export function PatientsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link to={`/patients/${patient.id}`}>View details</Link>
+                          <Link to={tenantPath(user?.tenantId, `/patients/${patient.id}`)}>View details</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setEditingPatient(patient)}>
                           <Pencil className="h-4 w-4 mr-2" /> Edit details

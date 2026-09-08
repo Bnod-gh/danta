@@ -95,8 +95,8 @@ export function RadiographViewer({ imageId, fileName }: { imageId: string; fileN
     ctx.restore();
   }, [pxPerMm]);
 
-  useEffect(() => {
-    if (!open && !imageId) return;
+   useEffect(() => {
+     if (imageId) {
     let cancelled = false;
     let objectUrl: string | null = null;
     setLoading(true);
@@ -140,11 +140,12 @@ export function RadiographViewer({ imageId, fileName }: { imageId: string; fileN
         }
       });
 
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [imageId, redraw]);
+     return () => {
+       cancelled = true;
+       if (objectUrl) URL.revokeObjectURL(objectUrl);
+     };
+   }
+   }, [imageId, redraw]);
 
   useEffect(() => {
     redraw();

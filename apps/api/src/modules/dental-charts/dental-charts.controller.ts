@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { DentalChartsService } from './dental-charts.service';
-import type { CreateDentalChart, UpdateDentalChart } from '@danta/schemas';
+import type { CreateDentalChart, UpdateDentalChart, BatchCreateToothCondition, GeneratePlanFromChart } from '@danta/schemas';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
@@ -39,5 +39,17 @@ export class DentalChartsController {
   @RequirePermissions('dental_chart:update')
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.dentalChartsService.remove(user.tenantId, user.id, id);
+  }
+
+  @Post(':id/conditions/batch')
+  @RequirePermissions('dental_chart:update')
+  async batchApplyConditions(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: Omit<BatchCreateToothCondition, 'dentalChartId'>) {
+    return this.dentalChartsService.batchCreateConditions(user.tenantId, user.id, id, body);
+  }
+
+  @Post(':id/generate-plan')
+  @RequirePermissions('dental_chart:update')
+  async generatePlan(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() body: GeneratePlanFromChart) {
+    return this.dentalChartsService.generatePlanFromChart(user.tenantId, user.id, id, body);
   }
 }

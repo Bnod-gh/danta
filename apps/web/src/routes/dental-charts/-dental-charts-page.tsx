@@ -10,36 +10,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@danta/ui/card';
 import { Skeleton } from '@danta/ui/skeleton';
 import { Select } from '@danta/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@danta/ui/dialog';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@danta/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@danta/ui/table';
 import { ToggleGroup, ToggleGroupItem } from '@danta/ui/toggle-group';
 import {
-  CONDITION_CDT_MAP,
-  CONDITION_COLORS,
-  CONDITION_LABELS,
   SURFACE_LABELS,
   universalToFdi,
   fdiToUniversal,
-  type DentalCondition,
+  type ClinicalStatus,
   type ToothConditionStatus,
   type ToothSurface,
+  type FindingSeverity,
 } from '@danta/schemas';
 import { apiGet } from '../../lib/api/request';
 import {
   addToothCondition,
   createDentalChart,
-  batchApplyConditions,
   deleteToothCondition,
   generatePlanFromChart,
   getDentalCharts,
   getToothConditions,
   type ChartPlanLine,
 } from '../../lib/api/dental-charts';
-import { Odontogram, type OdontogramSelection } from '../../components/clinical/Odontogram';
+import { getTenantSchedulingResources } from '../../lib/api/clinical-modules';
+import { getToothConditionConfigs } from '../../lib/api/tooth-condition-configs';
+import { Odontogram } from '../../components/clinical/Odontogram';
+import { ToothModal } from '../../components/clinical/ToothModal';
+import { ModuleSelectorModal } from '../../components/clinical/ModuleSelectorModal';
 import { TreatmentPalette } from '../../components/clinical/TreatmentPalette';
 import { HistoryChips } from '../../components/clinical/HistoryChips';
 import { ChartSessionProvider, useChartSession } from '../../lib/clinical/chart-session';
-import type { DentalChart, Patient, Provider, ToothCondition } from '@danta/schemas';
+import type { ClinicalModule, DentalChart, Patient, Provider, ToothCondition, ToothConditionConfig } from '@danta/schemas';
 import { formatCurrency } from '../../lib/format';
 import { tenantPath } from '../../lib/tenant-routing';
 import { useAuth } from '../../lib/auth-context';
@@ -50,16 +50,53 @@ const POLL_INTERVAL_5MIN = 5 * 60 * 1000;
 function DentalChartsInner() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { dentition, setDentition, mode, activeTreatment, pushUndo } = useChartSession();
+  const { dentition, setDentition } = useChartSession();
   const [patientSearch, setPatientSearch] = useState('');
   const [patientId, setPatientId] = useState<string | null>(null);
   const [numbering, setNumbering] = useState<'universal' | 'fdi'>('fdi');
-  const [selection, setSelection] = useState<OdontogramSelection | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<{ items: ChartPlanLine[]; estimatedTotal: number; planId: string } | null>(null);
   const [providerId, setProviderId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedModule, setSelectedModule] = useState<ClinicalModule | null>(null);
+  const [moduleModalOpen, setModuleModalOpen] = useState(false);
+  const [toothModal, setToothModal] = useState<{ tooth: string; isMaxilla: boolean } | null>(null);
+
+  const conditionConfigsQuery = useQuery({
+    queryKey: ['tooth-condition-configs'],
+    queryFn: () => getToothConditionConfigs(),
+  });
+  const conditionConfigs: ToothConditionConfig[] = conditionConfigsQuery.data ?? [];
+  const conditionConfigMap = useMemo(() => {
+    return conditionConfigs.reduce((acc, cfg) => {
+      acc[cfg.code] = cfg;
+      return acc;
+    }, {} as Record<string, ToothConditionConfig>);
+  }, [conditionConfigs]);
+
+  const resourcesQuery = useQuery({
+    queryKey: ['scheduling-resources', 'odontogram'],
+    queryFn: getTenantSchedulingResources,
+    enabled: !!patientId,
+  });
+
+  const moduleTabs = useMemo(() => {
+    const resource = resourcesQuery.data?.[0];
+    if (!resource) return [];
+    return (resource.modules ?? [])
+      .filter((m) => m.active)
+      .sort((a, b) => a.order - b.order)
+      .map((m) => ({ type: m.clinicalModule.type, displayName: m.clinicalModule.displayName }));
+  }, [resourcesQuery.data]);
+
+  const activeModules = useMemo(() => {
+    const resource = resourcesQuery.data?.[0];
+    if (!resource) return [];
+    return (resource.modules ?? [])
+      .filter((m) => m.active)
+      .sort((a, b) => a.order - b.order)
+      .map((m) => m.clinicalModule);
+  }, [resourcesQuery.data]);
 
   const patientsQuery = useQuery({
     queryKey: ['patients', 'chart-picker', patientSearch],
@@ -75,7 +112,6 @@ function DentalChartsInner() {
 
   const chart: DentalChart | null = chartsQuery.data?.[0] ?? null;
 
-  // Real-time sync: poll every 5 minutes so concurrent clinician edits converge.
   const refreshFindings = useCallback(() => {
     if (chart) queryClient.invalidateQueries({ queryKey: ['tooth-conditions', chart.id] });
   }, [chart, queryClient]);
@@ -105,53 +141,52 @@ function DentalChartsInner() {
 
   const conditions: ToothCondition[] = useMemo(() => conditionsQuery.data ?? [], [conditionsQuery]);
 
-  const handleSelect = async (sel: OdontogramSelection) => {
-    setSelection(sel);
+  const handleToothClick = async (tooth: string, isMaxilla: boolean) => {
     if (!chart) {
       try { await ensureChart(); await queryClient.invalidateQueries({ queryKey: ['dental-charts', patientId] }); }
       catch { toast.error('Failed to create dental chart'); return; }
     }
-    // Apply mode: clicking a tooth applies the active treatment immediately.
-    if (mode === "apply" && activeTreatment && chart) {
-      try {
-        await batchApplyConditions(chart.id, {
-          condition: activeTreatment.condition,
-          teeth: [sel.tooth],
-          surfaces: activeTreatment.surfaces,
-          scope: activeTreatment.scope,
-          dentition,
-          procedureCodeId: activeTreatment.procedureCodeId ?? undefined,
-          status: "planned",
-        });
-        const label = CONDITION_LABELS[activeTreatment.condition] || activeTreatment.condition;
-        pushUndo({
-          label: `Apply ${label} to ${sel.tooth}`,
-          undo: () => { queryClient.invalidateQueries({ queryKey: ["tooth-conditions", chart.id] }); },
-        });
-        toast.success(`Applied ${label} to tooth ${sel.tooth}`);
-        queryClient.invalidateQueries({ queryKey: ["tooth-conditions", chart.id] });
-      } catch { toast.error("Failed to apply treatment"); }
+    if (activeModules.length > 0 && !selectedModule) {
+      setToothModal({ tooth, isMaxilla });
+      setModuleModalOpen(true);
       return;
     }
-    setSheetOpen(true);
+    setToothModal({ tooth, isMaxilla });
   };
 
-  const handleAddCondition = async (form: { condition: DentalCondition; surface?: ToothSurface; status: ToothConditionStatus; notes?: string }) => {
-    if (!chart) return;
+  const handleModuleChosen = (module: ClinicalModule) => {
+    setSelectedModule(module);
+    setModuleModalOpen(false);
+  };
+
+  const handleModalSubmit = async (form: {
+    conditionCode: string;
+    surfaces: ToothSurface[];
+    status: ToothConditionStatus;
+    clinicalStatus: ClinicalStatus;
+    severity?: FindingSeverity;
+    notes?: string;
+  }) => {
+    if (!chart || !toothModal) return;
     setSaving(true);
     try {
       const created = await addToothCondition({
         dentalChartId: chart.id,
-        toothNumber: String(selection!.tooth),
-        condition: form.condition,
+        toothNumber: toothModal.tooth,
+        condition: form.conditionCode,
         scope: 'tooth',
         dentition,
-        ...(form.surface ? { surface: form.surface } : {}),
+        surfaces: form.surfaces,
         status: form.status,
+        ...(form.clinicalStatus ? { clinicalStatus: form.clinicalStatus } : {}),
+        ...(selectedModule?.type ? { clinicalModule: selectedModule.type } : {}),
+        ...(form.severity ? { severity: form.severity } : {}),
         ...(form.notes?.trim() ? { notes: form.notes.trim() } : {}),
       });
       queryClient.setQueryData<ToothCondition[]>(['tooth-conditions', chart.id], (prev) => [...(prev ?? []), created]);
-      toast.success('Condition recorded');
+      const cfg = conditionConfigs.find((c) => c.code === form.conditionCode);
+      toast.success(`Recorded ${cfg?.name ?? form.conditionCode} on tooth ${toothModal.tooth}`);
+      setToothModal(null);
     } catch { toast.error('Failed to record condition'); }
     finally { setSaving(false); }
   };
@@ -172,7 +207,6 @@ function DentalChartsInner() {
       const result = await generatePlanFromChart(chart.id, providerId || undefined);
       setGeneratedPlan({ items: result.items, estimatedTotal: result.estimatedTotal, planId: result.plan.id });
       setPlanDialogOpen(false);
-      setSheetOpen(false);
     } catch (error) {
       const message = error instanceof Error && error.message.includes('No charted conditions')
         ? 'No charted conditions map to planned treatment yet'
@@ -181,14 +215,25 @@ function DentalChartsInner() {
     } finally { setSaving(false); }
   };
 
-  const selectedConditions = selection ? conditions.filter((c) => c.toothNumber === selection.tooth) : [];
+  const selectedToothConditions = toothModal
+    ? conditions
+        .filter((c) => c.toothNumber === toothModal.tooth || c.toothNumber === String(Number(toothModal.tooth)))
+        .map((c) => ({
+          id: c.id,
+          toothNumber: c.toothNumber ?? '',
+          condition: c.condition,
+          surfaces: c.surfaces ?? [],
+          surface: c.surface,
+          status: c.status,
+        }))
+    : [];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tooth Charting</h1>
-          <p className="text-muted-foreground">Interactive odontogram — pick a treatment, then click teeth to apply</p>
+          <p className="text-muted-foreground">Interactive odontogram — click a tooth to record findings</p>
         </div>
         <div className="flex items-center gap-2">
           <ChartSessionUndoRedo />
@@ -238,7 +283,7 @@ function DentalChartsInner() {
       {patientId && (
         <>
           <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => { setPatientId(null); setSelection(null); setSheetOpen(false); }}>&larr; Change patient</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setPatientId(null); setToothModal(null); }}>&larr; Change patient</Button>
             {chart && <Badge variant="secondary">Chart {chart.id.slice(0, 8)} &middot; {new Date(chart.chartDate).toLocaleDateString()}</Badge>}
           </div>
 
@@ -247,7 +292,20 @@ function DentalChartsInner() {
               <Card>
                 <CardContent className="pt-6">
                   {chartsQuery.isLoading ? <Skeleton className="h-96 w-full" /> : (
-                    <Odontogram conditions={conditions} numbering={numbering} selected={sheetOpen ? selection : null} onSelect={handleSelect} dentition={dentition} />
+                    <Odontogram
+                      conditions={conditions}
+                      numbering={numbering}
+                      onSelect={() => {}}
+                      onToothClick={handleToothClick}
+                      dentition={dentition}
+                      moduleTabs={moduleTabs}
+                      activeModuleType={selectedModule?.type ?? null}
+                      onModuleChange={(type) => {
+                        const mod = type ? activeModules.find((m) => m.type === type) ?? null : null;
+                        setSelectedModule(mod);
+                      }}
+                      conditionConfigMap={conditionConfigMap}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -255,7 +313,7 @@ function DentalChartsInner() {
                 <CardHeader className="pb-2"><CardTitle className="text-base">Charted conditions ({conditions.length})</CardTitle></CardHeader>
                 <CardContent>
                   {conditions.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">No findings recorded yet &mdash; pick a treatment then click a tooth.</p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">No findings recorded yet — click a tooth to chart.</p>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -266,14 +324,16 @@ function DentalChartsInner() {
                       </TableHeader>
                       <TableBody>
                         {conditions.map((condition) => {
-                          const treatment = CONDITION_CDT_MAP[condition.condition as DentalCondition];
+                          const cfg = conditionConfigs.find((c) => c.code === condition.condition);
+                          const color = cfg?.color ?? '#64748b';
+                          const label = cfg?.name ?? condition.condition;
                           return (
                             <TableRow key={condition.id}>
                               <TableCell className="font-medium">{condition.toothNumber}<span className="ml-1.5 text-xs text-muted-foreground">({numbering === 'fdi' ? `Univ ${fdiToUniversal(Number(condition.toothNumber))}` : `FDI ${universalToFdi(Number(condition.toothNumber))}`})</span></TableCell>
-                              <TableCell><span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CONDITION_COLORS[condition.condition as DentalCondition] }} />{CONDITION_LABELS[condition.condition as DentalCondition] ?? condition.condition}</span></TableCell>
+                              <TableCell><span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}</span></TableCell>
                               <TableCell>{(condition.surfaces?.length ? condition.surfaces.map((s) => SURFACE_LABELS[s as ToothSurface] ?? s).join('+') : (condition.surface ? SURFACE_LABELS[condition.surface as ToothSurface] ?? condition.surface : '—'))}</TableCell>
                               <TableCell><Badge variant={condition.status === 'planned' ? 'default' : condition.status === 'watch' ? 'secondary' : 'outline'}>{condition.status}</Badge></TableCell>
-                              <TableCell>{treatment ? <span className="font-mono text-xs">{treatment.code} &middot; {formatCurrency(treatment.defaultFee)}</span> : '—'}</TableCell>
+                              <TableCell>{cfg?.cdtCode ? <span className="font-mono text-xs">{cfg.cdtCode}{cfg.cdtFee ? ` · ${formatCurrency(cfg.cdtFee)}` : ''}</span> : '—'}</TableCell>
                               <TableCell className="max-w-40 truncate text-xs text-muted-foreground">{condition.notes ?? '—'}</TableCell>
                               <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteCondition(condition.id)} aria-label="Delete condition"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>
                             </TableRow>
@@ -287,37 +347,35 @@ function DentalChartsInner() {
             </div>
 
             <div className="space-y-4">
-              <HistoryChips chartId={chart?.id ?? null} patientId={patientId} />
+              <HistoryChips chartId={chart?.id ?? null} patientId={patientId} conditionConfigs={conditionConfigs} />
               <TreatmentPalette />
             </div>
           </div>
         </>
       )}
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="w-[420px] sm:max-w-[420px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Tooth {selection?.tooth}{selection?.tooth && <span className="ml-2 text-sm font-normal text-muted-foreground">{numbering === 'fdi' ? `Universal ${fdiToUniversal(Number(selection.tooth))}` : `FDI ${universalToFdi(Number(selection.tooth))}`}</span>}</SheetTitle>
-            <SheetDescription>{selection?.surface ? `${SURFACE_LABELS[selection.surface]} surface selected` : 'Select a surface finding to record'}</SheetDescription>
-          </SheetHeader>
-          <InspectorForm key={`${selection?.tooth}-${selection?.surface}-${selectedConditions.length}`} defaultSurface={selection?.surface ?? undefined} saving={saving} onSubmit={handleAddCondition} />
-          <div className="mt-6">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recorded findings</p>
-            {selectedConditions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nothing recorded for this tooth yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {selectedConditions.map((condition) => (
-                  <li key={condition.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CONDITION_COLORS[condition.condition as DentalCondition] }} />{CONDITION_LABELS[condition.condition as DentalCondition] ?? condition.condition}<span className="text-xs text-muted-foreground">{condition.surfaces?.length ? condition.surfaces.join('+') : (condition.surface ?? 'whole tooth')} &middot; {condition.status}</span></span>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteCondition(condition.id)} aria-label="Delete"><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {toothModal && (
+        <ToothModal
+          open={!!toothModal}
+          onOpenChange={(open) => !open && setToothModal(null)}
+          tooth={toothModal.tooth}
+          isMaxilla={toothModal.isMaxilla}
+          conditions={selectedToothConditions}
+          conditionConfigs={conditionConfigs}
+          moduleType={selectedModule?.type ?? null}
+          saving={saving}
+          onSubmit={handleModalSubmit}
+          onDeleteCondition={handleDeleteCondition}
+        />
+      )}
+
+      <ModuleSelectorModal
+        open={moduleModalOpen}
+        tooth={toothModal?.tooth ?? ''}
+        modules={activeModules}
+        onSelect={handleModuleChosen}
+        onOpenChange={setModuleModalOpen}
+      />
 
       <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
         <DialogContent className="max-w-md">
@@ -368,58 +426,7 @@ function ChartSessionUndoRedo() {
 export function DentalChartsPage() {
   return (
     <ChartSessionProvider>
-      <ApplyModeClicks />
       <DentalChartsInner />
     </ChartSessionProvider>
-  );
-}
-
-/** Bridges the store's apply-mode + active treatment to tooth clicks (whole-page wiring). */
-function ApplyModeClicks() {
-  const queryClient = useQueryClient();
-  useChartSession();
-  // Keyboard undo/redo shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); queryClient && undefined; }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [queryClient]);
-  return null;
-}
-
-function InspectorForm({ defaultSurface, saving, onSubmit }: { defaultSurface?: ToothSurface; saving: boolean; onSubmit: (form: { condition: DentalCondition; surface?: ToothSurface; status: ToothConditionStatus; notes?: string }) => void }) {
-  const [condition, setCondition] = useState<DentalCondition>('caries');
-  const [surface, setSurface] = useState<ToothSurface | ''>(defaultSurface ?? '');
-  const [status, setStatus] = useState<ToothConditionStatus>('planned');
-  const [notes, setNotes] = useState('');
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="insp-condition">Condition</Label>
-        <Select id="insp-condition" value={condition} onChange={(event) => setCondition(event.target.value as DentalCondition)}>
-          {(Object.keys(CONDITION_LABELS) as DentalCondition[]).map((value) => (<option key={value} value={value}>{CONDITION_LABELS[value]}</option>))}
-        </Select>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label htmlFor="insp-surface">Surface</Label>
-          <Select id="insp-surface" value={surface} onChange={(event) => setSurface(event.target.value as ToothSurface | '')}>
-            <option value="">Whole tooth</option>
-            {(Object.keys(SURFACE_LABELS) as ToothSurface[]).map((value) => (<option key={value} value={value}>{SURFACE_LABELS[value]}</option>))}
-          </Select>
-        </div>
-        <div className="space-y-1.5"><Label htmlFor="insp-status">Status</Label>
-          <Select id="insp-status" value={status} onChange={(event) => setStatus(event.target.value as ToothConditionStatus)}>
-            <option value="planned">Planned</option><option value="existing">Existing</option><option value="watch">Watch</option>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-1.5"><Label htmlFor="insp-notes">Notes</Label><Input id="insp-notes" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional clinical note" /></div>
-      {CONDITION_CDT_MAP[condition] && <p className="text-xs text-muted-foreground">Maps to [{CONDITION_CDT_MAP[condition]!.code}] {CONDITION_CDT_MAP[condition]!.description} &middot; est. {formatCurrency(CONDITION_CDT_MAP[condition]!.defaultFee)}</p>}
-      <Button className="w-full" disabled={saving} onClick={() => onSubmit({ condition, ...(surface ? { surface } : {}), status, notes })}>{saving ? 'Saving…' : 'Record finding'}</Button>
-    </div>
   );
 }

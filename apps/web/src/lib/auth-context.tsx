@@ -2,7 +2,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './api-client';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from '@tanstack/react-router';
+import { useRouter, useNavigate } from '@tanstack/react-router';
 import type { UserRole, UserStatus } from '@danta/schemas';
 import { PUBLIC_ROUTES } from './public-routes';
 
@@ -146,9 +146,16 @@ export function useAuth() {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const navigate = useNavigate();
 
   const currentPath = router.state.location.pathname;
   const isPublicRoute = PUBLIC_ROUTES.some(route => currentPath === route || currentPath.startsWith(route + '/'));
+
+  useEffect(() => {
+    if (!loading && !user && !isPublicRoute) {
+      navigate({ to: '/login' });
+    }
+  }, [loading, user, isPublicRoute, navigate]);
 
   if (isPublicRoute) {
     return <>{children}</>;
@@ -166,7 +173,6 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    router.navigate({ to: '/login' });
     return null;
   }
 

@@ -1,2 +1,3 @@
 -- Add superadmin as a new role value
-ALTER TYPE "UserRole" ADD VALUE "superadmin" IF NOT EXISTS;
+ALTER TYPE "UserRole" ADD VALUE 'superadmin';
+

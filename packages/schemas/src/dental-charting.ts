@@ -3,64 +3,45 @@ import { z } from 'zod';
 export const ToothSurfaceSchema = z.enum(['mesial', 'distal', 'occlusal', 'buccal', 'lingual', 'root']);
 export type ToothSurface = z.infer<typeof ToothSurfaceSchema>;
 
-export const DentalConditionSchema = z.enum([
-  'caries',
-  'filling',
-  'crown',
-  'root_canal',
-  'implant',
-  'missing',
-  'extraction',
-  'veneer',
-]);
-export type DentalCondition = z.infer<typeof DentalConditionSchema>;
+export const FDI_PERMANENT = /^(1[1-8]|2[1-8]|3[1-8]|4[1-8])$/;
+export const FDI_PRIMARY = /^(5[1-5]|6[1-5]|7[1-5]|8[1-5])$/;
 
+/** Accepts an FDI number (permanent or primary, governed by `dentition`) or a
+ *  Universal number (1-32). Default validates permanent only for backward compat. */
+export function isValidToothNumber(value: string, dentition: 'permanent' | 'primary' = 'permanent'): boolean {
+  if (!/^\d{1,2}$/.test(value)) return false;
+  if (value.length === 2) {
+    return dentition === 'primary' ? FDI_PRIMARY.test(value) : FDI_PERMANENT.test(value);
+  }
+  try {
+    universalToFdi(Number(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const ToothNumberSchema = z
+  .string()
+  .refine((v) => isValidToothNumber(v), 'Tooth must be a valid FDI number (e.g. 16) or Universal number (1-32)');
+
+export const FindingSeveritySchema = z.enum(['mild', 'moderate', 'severe']);
+export type FindingSeverity = z.infer<typeof FindingSeveritySchema>;
+
+export const DentitionSchema = z.enum(['permanent', 'primary']);
+export type Dentition = z.infer<typeof DentitionSchema>;
+
+export const FindingScopeSchema = z.enum(['tooth', 'mouth']);
+export type FindingScope = z.infer<typeof FindingScopeSchema>;
+
+export const ClinicalStatusSchema = z.enum(['planned', 'in_progress', 'diagnosed', 'existing', 'accepted', 'completed', 'cancelled']);
+export type ClinicalStatus = z.infer<typeof ClinicalStatusSchema>;
+
+/** Legacy tooth condition statuses (pre-module-system values). */
 export const ToothConditionStatusSchema = z.enum(['planned', 'existing', 'watch']);
 export type ToothConditionStatus = z.infer<typeof ToothConditionStatusSchema>;
 
-export interface CdtTreatment {
-  code: string;
-  description: string;
-  defaultFee: number;
-}
-
-/** Suggested ADA/CDT treatment per diagnosed condition; null = no planned treatment generated. */
-export const CONDITION_CDT_MAP: Record<DentalCondition, CdtTreatment | null> = {
-  caries: { code: 'D2392', description: 'Composite restoration — two surfaces', defaultFee: 220 },
-  crown: { code: 'D2740', description: 'Crown — porcelain/ceramic', defaultFee: 1250 },
-  root_canal: { code: 'D3330', description: 'Endodontic therapy — molar', defaultFee: 950 },
-  implant: { code: 'D6010', description: 'Surgical placement of implant body', defaultFee: 3500 },
-  extraction: { code: 'D7140', description: 'Extraction — erupted tooth or exposed root', defaultFee: 250 },
-  veneer: { code: 'D2962', description: 'Veneer restoration — lab fabricated', defaultFee: 900 },
-  filling: null,
-  missing: null,
-};
-
-export const CONDITION_LABELS: Record<DentalCondition, string> = {
-  caries: 'Caries',
-  filling: 'Filling',
-  crown: 'Crown',
-  root_canal: 'Root Canal Therapy',
-  implant: 'Implant',
-  missing: 'Missing',
-  extraction: 'Extraction Needed',
-  veneer: 'Veneer',
-};
-
-
-/** Clinical-condition color key (UI). Single source of truth shared by the
- *  schema barrel and charting components. */
-export const CONDITION_COLORS: Record<DentalCondition, string> = {
-  caries: "#dc2626",
-  filling: "#3b82f6",
-  crown: "#d4a017",
-  root_canal: "#9333ea",
-  implant: "#475569",
-  missing: "#94a3b8",
-  extraction: "#ea580c",
-  veneer: "#14b8a6",
-};
-
+/** User-facing labels for tooth surfaces. Conditions are tenant-configurable; surfaces are stable. */
 export const SURFACE_LABELS: Record<ToothSurface, string> = {
   mesial: 'Mesial',
   distal: 'Distal',
@@ -70,10 +51,17 @@ export const SURFACE_LABELS: Record<ToothSurface, string> = {
   root: 'Root',
 };
 
-/** Universal numbering runs 1-32: upper right third molar (1) around to lower right third molar (32). */
-export const UNIVERSAL_TEETH = Array.from({ length: 32 }, (_, i) => i + 1);
+/** User-facing labels for the rich clinical-status lifecycle. */
+export const CLINICAL_STATUS_LABELS: Record<ClinicalStatus, string> = {
+  planned: 'Planned',
+  in_progress: 'In progress',
+  diagnosed: 'Diagnosed',
+  existing: 'Existing',
+  accepted: 'Accepted',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
 
-/** FDI/ISO two-digit notation: quadrants 1 (UR), 2 (UL), 3 (LL), 4 (LR); position 1 = central incisor. */
 export function universalToFdi(universal: number): number {
   if (universal < 1 || universal > 32) throw new Error(`Invalid universal tooth number: ${universal}`);
   if (universal <= 8) return 10 + (9 - universal);
@@ -109,5 +97,5 @@ export function formatToothLabel(universal: number, system: 'universal' | 'fdi')
  * maxilla renders patient-right → patient-left (universal 1…16),
  * mandible renders patient-left → patient-right (universal 32…17).
  */
-export const MAXILLA_RENDER_ORDER = UNIVERSAL_TEETH.slice(0, 16);
-export const MANDIBLE_RENDER_ORDER = [...UNIVERSAL_TEETH].slice(16, 32).reverse();
+export const MAXILLA_RENDER_ORDER = Array.from({ length: 16 }, (_, i) => i + 1);
+export const MANDIBLE_RENDER_ORDER = Array.from({ length: 16 }, (_, i) => 32 - i);

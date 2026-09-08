@@ -49,7 +49,7 @@ export function PatientTimelinePanel({ patientId }: { patientId: string }) {
   const events = useMemo<ClinicalTimelineEventVM[]>(() => {
     const list = data?.events ?? [];
     if (!filter.types) return list;
-    return list.filter((event) => filter.types?.includes(event.type));
+    return list.filter((event: ClinicalTimelineEventVM) => filter.types?.includes(event.type));
   }, [data, filter]);
 
   return (

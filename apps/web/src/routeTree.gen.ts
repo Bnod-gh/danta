@@ -78,10 +78,12 @@ import { Route as ReportsPractitionersIndexRouteImport } from './routes/reports/
 import { Route as ReportsProductionIndexRouteImport } from './routes/reports/production/index'
 import { Route as ReportsRecallsIndexRouteImport } from './routes/reports/recalls/index'
 import { Route as ReportsRevenueIndexRouteImport } from './routes/reports/revenue/index'
+import { Route as SettingsClinicalIndexRouteImport } from './routes/settings/clinical/index'
 import { Route as SettingsLocationsIndexRouteImport } from './routes/settings/locations/index'
 import { Route as SettingsOrganisationIndexRouteImport } from './routes/settings/organisation/index'
 import { Route as SettingsPracticeIndexRouteImport } from './routes/settings/practice/index'
 import { Route as SettingsSecurityIndexRouteImport } from './routes/settings/security/index'
+import { Route as PatientsIdClinicalIndexRouteImport } from './routes/patients/$id/clinical/index'
 
 const ApiKeysIndexRoute = ApiKeysIndexRouteImport.update({
   id: '/api-keys/',
@@ -442,6 +444,11 @@ const ReportsRevenueIndexRoute = ReportsRevenueIndexRouteImport.update({
   path: '/reports/revenue/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsClinicalIndexRoute = SettingsClinicalIndexRouteImport.update({
+  id: '/settings/clinical/',
+  path: '/settings/clinical/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsLocationsIndexRoute = SettingsLocationsIndexRouteImport.update({
   id: '/settings/locations/',
   path: '/settings/locations/',
@@ -463,9 +470,14 @@ const SettingsSecurityIndexRoute = SettingsSecurityIndexRouteImport.update({
   path: '/settings/security/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PatientsIdClinicalIndexRoute = PatientsIdClinicalIndexRouteImport.update({
+  id: '/clinical/',
+  path: '/clinical/',
+  getParentRoute: () => PatientsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/patients/$id': typeof PatientsIdRoute
+  '/patients/$id': typeof PatientsIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/api-keys/': typeof ApiKeysIndexRoute
   '/appointment-reminders/': typeof AppointmentRemindersIndexRoute
@@ -534,13 +546,15 @@ export interface FileRoutesByFullPath {
   '/reports/production/': typeof ReportsProductionIndexRoute
   '/reports/recalls/': typeof ReportsRecallsIndexRoute
   '/reports/revenue/': typeof ReportsRevenueIndexRoute
+  '/settings/clinical/': typeof SettingsClinicalIndexRoute
   '/settings/locations/': typeof SettingsLocationsIndexRoute
   '/settings/organisation/': typeof SettingsOrganisationIndexRoute
   '/settings/practice/': typeof SettingsPracticeIndexRoute
   '/settings/security/': typeof SettingsSecurityIndexRoute
+  '/patients/$id/clinical/': typeof PatientsIdClinicalIndexRoute
 }
 export interface FileRoutesByTo {
-  '/patients/$id': typeof PatientsIdRoute
+  '/patients/$id': typeof PatientsIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/api-keys': typeof ApiKeysIndexRoute
   '/appointment-reminders': typeof AppointmentRemindersIndexRoute
@@ -609,14 +623,16 @@ export interface FileRoutesByTo {
   '/reports/production': typeof ReportsProductionIndexRoute
   '/reports/recalls': typeof ReportsRecallsIndexRoute
   '/reports/revenue': typeof ReportsRevenueIndexRoute
+  '/settings/clinical': typeof SettingsClinicalIndexRoute
   '/settings/locations': typeof SettingsLocationsIndexRoute
   '/settings/organisation': typeof SettingsOrganisationIndexRoute
   '/settings/practice': typeof SettingsPracticeIndexRoute
   '/settings/security': typeof SettingsSecurityIndexRoute
+  '/patients/$id/clinical': typeof PatientsIdClinicalIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/patients/$id': typeof PatientsIdRoute
+  '/patients/$id': typeof PatientsIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/api-keys/': typeof ApiKeysIndexRoute
   '/appointment-reminders/': typeof AppointmentRemindersIndexRoute
@@ -685,10 +701,12 @@ export interface FileRoutesById {
   '/reports/production/': typeof ReportsProductionIndexRoute
   '/reports/recalls/': typeof ReportsRecallsIndexRoute
   '/reports/revenue/': typeof ReportsRevenueIndexRoute
+  '/settings/clinical/': typeof SettingsClinicalIndexRoute
   '/settings/locations/': typeof SettingsLocationsIndexRoute
   '/settings/organisation/': typeof SettingsOrganisationIndexRoute
   '/settings/practice/': typeof SettingsPracticeIndexRoute
   '/settings/security/': typeof SettingsSecurityIndexRoute
+  '/patients/$id/clinical/': typeof PatientsIdClinicalIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -762,10 +780,12 @@ export interface FileRouteTypes {
     | '/reports/production/'
     | '/reports/recalls/'
     | '/reports/revenue/'
+    | '/settings/clinical/'
     | '/settings/locations/'
     | '/settings/organisation/'
     | '/settings/practice/'
     | '/settings/security/'
+    | '/patients/$id/clinical/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/patients/$id'
@@ -837,10 +857,12 @@ export interface FileRouteTypes {
     | '/reports/production'
     | '/reports/recalls'
     | '/reports/revenue'
+    | '/settings/clinical'
     | '/settings/locations'
     | '/settings/organisation'
     | '/settings/practice'
     | '/settings/security'
+    | '/patients/$id/clinical'
   id:
     | '__root__'
     | '/patients/$id'
@@ -912,14 +934,16 @@ export interface FileRouteTypes {
     | '/reports/production/'
     | '/reports/recalls/'
     | '/reports/revenue/'
+    | '/settings/clinical/'
     | '/settings/locations/'
     | '/settings/organisation/'
     | '/settings/practice/'
     | '/settings/security/'
+    | '/patients/$id/clinical/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  PatientsIdRoute: typeof PatientsIdRoute
+  PatientsIdRoute: typeof PatientsIdRouteWithChildren
   SettingsSectionRoute: typeof SettingsSectionRoute
   ApiKeysIndexRoute: typeof ApiKeysIndexRoute
   AppointmentRemindersIndexRoute: typeof AppointmentRemindersIndexRoute
@@ -988,6 +1012,7 @@ export interface RootRouteChildren {
   ReportsProductionIndexRoute: typeof ReportsProductionIndexRoute
   ReportsRecallsIndexRoute: typeof ReportsRecallsIndexRoute
   ReportsRevenueIndexRoute: typeof ReportsRevenueIndexRoute
+  SettingsClinicalIndexRoute: typeof SettingsClinicalIndexRoute
   SettingsLocationsIndexRoute: typeof SettingsLocationsIndexRoute
   SettingsOrganisationIndexRoute: typeof SettingsOrganisationIndexRoute
   SettingsPracticeIndexRoute: typeof SettingsPracticeIndexRoute
@@ -1479,6 +1504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRevenueIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/clinical/': {
+      id: '/settings/clinical/'
+      path: '/settings/clinical'
+      fullPath: '/settings/clinical/'
+      preLoaderRoute: typeof SettingsClinicalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/locations/': {
       id: '/settings/locations/'
       path: '/settings/locations'
@@ -1507,11 +1539,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSecurityIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/patients/$id/clinical/': {
+      id: '/patients/$id/clinical/'
+      path: '/clinical'
+      fullPath: '/patients/$id/clinical/'
+      preLoaderRoute: typeof PatientsIdClinicalIndexRouteImport
+      parentRoute: typeof PatientsIdRoute
+    }
   }
 }
 
+interface PatientsIdRouteChildren {
+  PatientsIdClinicalIndexRoute: typeof PatientsIdClinicalIndexRoute
+}
+
+const PatientsIdRouteChildren: PatientsIdRouteChildren = {
+  PatientsIdClinicalIndexRoute: PatientsIdClinicalIndexRoute,
+}
+
+const PatientsIdRouteWithChildren = PatientsIdRoute._addFileChildren(
+  PatientsIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  PatientsIdRoute: PatientsIdRoute,
+  PatientsIdRoute: PatientsIdRouteWithChildren,
   SettingsSectionRoute: SettingsSectionRoute,
   ApiKeysIndexRoute: ApiKeysIndexRoute,
   AppointmentRemindersIndexRoute: AppointmentRemindersIndexRoute,
@@ -1580,6 +1631,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsProductionIndexRoute: ReportsProductionIndexRoute,
   ReportsRecallsIndexRoute: ReportsRecallsIndexRoute,
   ReportsRevenueIndexRoute: ReportsRevenueIndexRoute,
+  SettingsClinicalIndexRoute: SettingsClinicalIndexRoute,
   SettingsLocationsIndexRoute: SettingsLocationsIndexRoute,
   SettingsOrganisationIndexRoute: SettingsOrganisationIndexRoute,
   SettingsPracticeIndexRoute: SettingsPracticeIndexRoute,

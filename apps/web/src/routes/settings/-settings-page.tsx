@@ -31,6 +31,7 @@ import { OrganisationSettingsPage } from './organisation/-organisation-settings-
 import { PracticeSettingsPage } from './practice/-practice-settings-page.tsx';
 import { LocationSettingsPage } from './locations/-location-settings-page.tsx';
 import { SecuritySettingsPage } from './security/-security-settings-page.tsx';
+import { ClinicalSettingsPage } from './clinical/-clinical-settings-page.tsx';
 import { useAuth } from '../../lib/auth-context';
 import { toast } from 'sonner';
 
@@ -104,12 +105,22 @@ export function SettingsPage({ section: sectionProp }: { section?: string } = {}
             </>
           )}
           {section === 'people' && <PeopleTab />}
-          {(section === 'clinical' || section === 'billing' || section === 'communication') && (
+          {(section === 'billing' || section === 'communication') && (
             <SettingsGroupForm
               group={section}
               data={settingsQuery.data?.[section]}
               isLoading={settingsQuery.isLoading}
             />
+          )}
+          {section === 'clinical' && (
+            <>
+              <SettingsGroupForm
+                group={section}
+                data={settingsQuery.data?.[section]}
+                isLoading={settingsQuery.isLoading}
+              />
+              <ClinicalSettingsPage />
+            </>
           )}
           {section === 'integrations' && <PlaceholderCard title="Integrations" description="Connect third-party programs — imaging, claims, messaging. Program installation arrives with the Modules rollout." />}
           {section === 'modules' && <ModulesTab />}

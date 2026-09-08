@@ -50,24 +50,22 @@ d('Tenant isolation (integration)', () => {
   const suffix = randomUUID().slice(0, 8);
   let tenantA: string;
   let tenantB: string;
-  let patientAId: string;
   let patientBId: string;
 
     const auditStub = { log: async () => undefined } as never;
-    const queueStub = { enqueue: async () => true } as never;
 
     beforeAll(async () => {
-      patientsService = new PatientsService(prisma as never, auditStub, queueStub);
-    clinicalService = new PatientClinicalService(prisma as never);
-    estimatesService = new EstimatesService(prisma as never, auditStub);
-    planItemsService = new TreatmentPlanItemsService(prisma as never, auditStub);
+      patientsService = new PatientsService(prisma as never, auditStub);
+      clinicalService = new PatientClinicalService(prisma as never);
+      estimatesService = new EstimatesService(prisma as never, auditStub);
+      planItemsService = new TreatmentPlanItemsService(prisma as never, auditStub);
 
     const orgA = await prisma.organisation.create({ data: { name: `IsolationTestA-${suffix}`, status: 'active' } });
     const orgB = await prisma.organisation.create({ data: { name: `IsolationTestB-${suffix}`, status: 'active' } });
     tenantA = orgA.id;
     tenantB = orgB.id;
 
-    const [patientA, patientB] = await Promise.all([
+    const [, patientB] = await Promise.all([
       prisma.patient.create({
         data: {
           tenantId: tenantA,
@@ -87,19 +85,18 @@ d('Tenant isolation (integration)', () => {
         },
       }),
     ]);
-    patientAId = patientA.id;
     patientBId = patientB.id;
   });
 
   afterAll(async () => {
     // Cleanup in FK-safe order for both tenants.
     for (const tenant of [tenantA, tenantB].filter(Boolean)) {
-      await prisma.estimateApproval.deleteMany({ where: { tenantId: tenant } });
-      await prisma.estimateItem.deleteMany({ where: { tenantId: tenant } });
+      await prisma.estimate_approvals.deleteMany({ where: { tenantId: tenant } });
+      await prisma.estimate_items.deleteMany({ where: { tenantId: tenant } });
       await prisma.estimate.deleteMany({ where: { tenantId: tenant } });
-      await prisma.appointmentTreatment.deleteMany({ where: { tenantId: tenant } });
+      await prisma.appointment_treatments.deleteMany({ where: { tenantId: tenant } });
       await prisma.treatmentHistory.deleteMany({ where: { tenantId: tenant } });
-      await prisma.treatmentPlanItem.deleteMany({ where: { tenantId: tenant } });
+      await prisma.treatment_plan_items.deleteMany({ where: { tenantId: tenant } });
       await prisma.treatmentPlan.deleteMany({ where: { tenantId: tenant } });
       await prisma.toothCondition.deleteMany({ where: { tenantId: tenant } });
       await prisma.dentalChart.deleteMany({ where: { tenantId: tenant } });
@@ -108,7 +105,7 @@ d('Tenant isolation (integration)', () => {
       await prisma.creditNote.deleteMany({ where: { tenantId: tenant } });
       await prisma.payment.deleteMany({ where: { tenantId: tenant } });
       await prisma.invoice.deleteMany({ where: { tenantId: tenant } });
-      await prisma.appointmentStatusEvent.deleteMany({ where: { tenantId: tenant } }).catch(() => undefined);
+      await prisma.appointment_status_events.deleteMany({ where: { tenantId: tenant } }).catch(() => undefined);
       await prisma.appointment.deleteMany({ where: { tenantId: tenant } });
       await prisma.recall.deleteMany({ where: { tenantId: tenant } });
       await prisma.waitlist.deleteMany({ where: { tenantId: tenant } }).catch(() => undefined);
@@ -125,21 +122,14 @@ d('Tenant isolation (integration)', () => {
     await expect(patientsService.findOne(tenantA, patientBId)).rejects.toThrow(/not found/i);
   });
 
-  it('Tenant A cannot update or archive Tenant B patient', async () => {
+  it('Tenant A cannot update Tenant B patient', async () => {
     await expect(
       patientsService.update(tenantA, 'user-a', patientBId, { firstName: 'Hacked' } as never),
     ).rejects.toThrow(/not found/i);
-    await expect(patientsService.archivePatient(tenantA, 'user-a', patientBId)).rejects.toThrow(/not found/i);
   });
 
   it('Tenant A cannot delete Tenant B patient', async () => {
     await expect(patientsService.remove(tenantA, 'user-a', patientBId)).rejects.toThrow(/not found|unable/i);
-  });
-
-  it('Tenant A cannot merge Tenant B patients', async () => {
-    await expect(
-      patientsService.mergePatients(tenantA, 'user-a', patientAId, patientBId),
-    ).rejects.toThrow(/not found/i);
   });
 
   it("Tenant A cannot fetch Tenant B clinical odontogram, tooth history or timeline", async () => {

@@ -32,7 +32,9 @@ import { ClinicalNotesModule } from './modules/clinical-notes/clinical-notes.mod
 import { TemplatesModule } from './modules/templates/templates.module';
 import { DentalChartsModule } from './modules/dental-charts/dental-charts.module';
 import { ToothConditionsModule } from './modules/tooth-conditions/tooth-conditions.module';
+import { ToothConditionConfigsModule } from './modules/tooth-condition-configs/tooth-condition-configs.module';
 import { TreatmentHistoryModule } from './modules/treatment-history/treatment-history.module';
+import { ProcedureCodesModule } from './modules/procedure-codes/procedure-codes.module';
 import { TreatmentPlansModule } from './modules/treatment-plans/treatment-plans.module';
 import { PeriodontalRecordsModule } from './modules/periodontal-records/periodontal-records.module';
 import { ImagingStudiesModule } from './modules/imaging-studies/imaging-studies.module';
@@ -55,6 +57,7 @@ import { AppointmentRemindersModule } from './modules/appointment-reminders/appo
 import { ReportsModule } from './modules/reports/reports.module';
 import { PatientPortalModule } from './modules/patient-portal/patient-portal.module';
 import { ImagingTwainModule } from './modules/imaging-twain/imaging-twain.module';
+import { ClinicalModulesModule } from './modules/clinical-modules/clinical-modules.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -90,7 +93,10 @@ import { StorageModule } from './storage/storage.module';
     ClinicalNotesModule,
     TemplatesModule,
     DentalChartsModule,
+    ClinicalModulesModule,
     ToothConditionsModule,
+    ToothConditionConfigsModule,
+    ProcedureCodesModule,
     TreatmentHistoryModule,
     TreatmentPlansModule,
     PeriodontalRecordsModule,

@@ -1,21 +1,10 @@
 ﻿import React, { createContext, useContext, useReducer, useMemo, type ReactNode } from "react";
 import type { OdontogramSelection } from "../../components/clinical/Odontogram";
-import type { DentalCondition, ToothSurface, Dentition } from "@danta/schemas";
-
-export type ChartMode = "inspect" | "apply";
-
-export interface ActiveTreatment {
-  condition: DentalCondition;
-  surfaces: ToothSurface[];
-  scope: "tooth" | "mouth";
-  procedureCodeId?: string | null;
-}
+import type { Dentition } from "@danta/schemas";
 
 interface ChartSessionState {
-  mode: ChartMode;
-  activeTreatment: ActiveTreatment | null;
   selection: OdontogramSelection | null;
-  /** Teeth selected for batch apply (multi-select). */
+  /** Teeth selected for batch operations (future multi-select). */
   selectedTeeth: string[];
   dentition: Dentition;
   undoStack: string[];
@@ -28,8 +17,6 @@ export interface UndoEntry {
 }
 
 type ChartAction =
-  | { type: "SET_MODE"; mode: ChartMode }
-  | { type: "SET_ACTIVE_TREATMENT"; treatment: ActiveTreatment | null }
   | { type: "SET_SELECTION"; selection: OdontogramSelection | null }
   | { type: "TOGGLE_TOOTH"; tooth: string }
   | { type: "CLEAR_TEETH" }
@@ -41,8 +28,6 @@ type ChartAction =
   | { type: "RESET" };
 
 const initialState: ChartSessionState = {
-  mode: "inspect",
-  activeTreatment: null,
   selection: null,
   selectedTeeth: [],
   dentition: "permanent",
@@ -52,10 +37,6 @@ const initialState: ChartSessionState = {
 
 function reducer(state: ChartSessionState, action: ChartAction): ChartSessionState {
   switch (action.type) {
-    case "SET_MODE":
-      return { ...state, mode: action.mode, selectedTeeth: [] };
-    case "SET_ACTIVE_TREATMENT":
-      return { ...state, activeTreatment: action.treatment, mode: action.treatment ? "apply" : "inspect", selectedTeeth: [] };
     case "SET_SELECTION":
       return { ...state, selection: action.selection };
     case "TOGGLE_TOOTH": {
@@ -82,8 +63,6 @@ function reducer(state: ChartSessionState, action: ChartAction): ChartSessionSta
 }
 
 interface ChartSessionCtxValue extends ChartSessionState {
-  setMode: (mode: ChartMode) => void;
-  setActiveTreatment: (treatment: ActiveTreatment | null) => void;
   setSelection: (selection: OdontogramSelection | null) => void;
   toggleTooth: (tooth: string) => void;
   clearTeeth: () => void;
@@ -104,8 +83,6 @@ export function ChartSessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ChartSessionCtxValue>(
     () => ({
       ...state,
-      setMode: (mode) => dispatch({ type: "SET_MODE", mode }),
-      setActiveTreatment: (treatment) => dispatch({ type: "SET_ACTIVE_TREATMENT", treatment }),
       setSelection: (selection) => dispatch({ type: "SET_SELECTION", selection }),
       toggleTooth: (tooth) => dispatch({ type: "TOGGLE_TOOTH", tooth }),
       clearTeeth: () => dispatch({ type: "CLEAR_TEETH" }),

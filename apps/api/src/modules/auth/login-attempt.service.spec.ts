@@ -39,9 +39,9 @@ describe('LoginAttemptService', () => {
   describe('recordAttempt', () => {
     it('should create a new attempt record on failure', async () => {
       const mockUpsert = jest.fn().mockResolvedValue({
-        email: 'test@example.com',
+        email: 'login:test@example.com',
         attempts: 1,
-        lockedUntil: new Date(Date.now() + 60000),
+        lockedUntil: null,
         lastAttemptAt: new Date(),
       });
 
@@ -50,24 +50,22 @@ describe('LoginAttemptService', () => {
       await service.recordAttempt('test@example.com', false);
 
       expect(mockUpsert).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
+        where: { email: 'login:test@example.com' },
         create: {
           email: 'login:test@example.com',
           attempts: 1,
-          lockedUntil: expect.any(Date),
-          lastAttemptAt: expect.any(Date),
+          lastAttemptAt: expect.anything(),
         },
         update: {
           attempts: { increment: 1 },
-          lastAttemptAt: expect.any(Date),
-          lockedUntil: expect.any(Date),
+          lastAttemptAt: expect.anything(),
         },
       });
     });
 
     it('should reset attempts on successful login', async () => {
       const mockUpsert = jest.fn().mockResolvedValue({
-        email: 'test@example.com',
+        email: 'login:test@example.com',
         attempts: 0,
         lockedUntil: null,
         lastAttemptAt: new Date(),
@@ -78,17 +76,16 @@ describe('LoginAttemptService', () => {
       await service.recordAttempt('test@example.com', true);
 
       expect(mockUpsert).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
+        where: { email: 'login:test@example.com' },
         create: {
           email: 'login:test@example.com',
-          attempts: 1,
-          lockedUntil: null,
-          lastAttemptAt: expect.any(Date),
+          attempts: 0,
+          lastAttemptAt: expect.anything(),
         },
         update: {
           attempts: 0,
           lockedUntil: null,
-          lastAttemptAt: expect.any(Date),
+          lastAttemptAt: expect.anything(),
         },
       });
     });

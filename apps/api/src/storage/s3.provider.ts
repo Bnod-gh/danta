@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { StorageProvider } from './storage.interface';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '@danta/config';
+import { Readable } from 'node:stream';
 
 @Injectable()
 export class S3StorageProvider implements StorageProvider {
@@ -46,5 +47,15 @@ export class S3StorageProvider implements StorageProvider {
 
   getUrl(key: string): string {
     return `${this.publicUrl}/${this.bucket}/${key}`;
+  }
+
+  async download(key: string): Promise<Readable> {
+    const result = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
+    return result.Body as Readable;
   }
 }

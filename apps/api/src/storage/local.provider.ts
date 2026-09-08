@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { StorageProvider } from './storage.interface';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { createReadStream } from 'fs';
+import { Readable } from 'node:stream';
 
 @Injectable()
 export class LocalStorageProvider implements StorageProvider {
@@ -38,5 +40,10 @@ export class LocalStorageProvider implements StorageProvider {
 
   getUrl(key: string): string {
     return `/storage/${key}`;
+  }
+
+  async download(key: string): Promise<Readable> {
+    const fullPath = this.resolvePath(key);
+    return createReadStream(fullPath);
   }
 }
