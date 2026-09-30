@@ -1,6 +1,6 @@
 # Danta
 
-Danta is an Australian-first multi-tenant Dental Practice Management SaaS designed to streamline clinical and administrative workflows for dental practices.
+Danta is a multi-tenant Dental Practice Management SaaS designed to streamline clinical and administrative workflows for dental practices.
 
 ## 🚀 Project Structure
 
