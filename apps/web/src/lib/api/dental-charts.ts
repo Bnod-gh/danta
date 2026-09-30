@@ -60,3 +60,7 @@ export interface PaletteTreatment {
 export async function getProcedureCatalog(category?: string): Promise<PaletteTreatment[]> {
   return apiGet('/procedure-codes', category ? { category } : undefined);
 }
+
+export async function promoteToothCondition(id: string, planId?: string): Promise<any> {
+  return apiPost(`/tooth-conditions/${id}/promote`, planId ? { planId } : {});
+}

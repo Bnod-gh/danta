@@ -11,10 +11,15 @@ export class ToothConditionsService {
   async findAll(tenantId: string, dentalChartId?: string) {
     const where: any = { tenantId };
     if (dentalChartId) where.dentalChartId = dentalChartId;
-    return this.prisma.toothCondition.findMany({
+    const conditions = await this.prisma.toothCondition.findMany({
       where,
       orderBy: { toothNumber: 'asc' },
     });
+
+    return conditions.map(c => ({
+      ...c,
+      clinicalModule: c.clinicalModule ?? 'diagnosis', // Fallback to diagnosis for legacy data
+    }));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -173,8 +178,66 @@ export class ToothConditionsService {
     return condition;
   }
 
-  async remove(tenantId: string, userId: string, id: string) {
-    const existing = await this.findOne(tenantId, id);
+  async promoteToTreatmentPlan(tenantId: string, userId: string, conditionId: string, planId?: string) {
+    const condition = await this.findOne(tenantId, conditionId);
+
+    // 1. Ensure we have a target treatment plan
+    let targetPlanId = planId;
+    if (!targetPlanId) {
+      // Try to find the most recent draft/proposed plan for the patient
+      const chart = await this.prisma.dentalChart.findFirst({
+        where: { id: condition.dentalChartId },
+        select: { patientId: true },
+      });
+      if (!chart) throw new NotFoundException('Associated dental chart not found');
+
+      const latestPlan = await this.prisma.treatmentPlan.findFirst({
+        where: { tenantId, patientId: chart.patientId, status: { in: ['draft', 'proposed'] } },
+        orderBy: { createdAt: 'desc' },
+      });
+      targetPlanId = latestPlan?.id;
+    }
+
+    if (!targetPlanId) {
+      throw new BadRequestException('No active draft or proposed treatment plan found. Please create a plan first.');
+    }
+
+    // 2. Create the treatment plan item
+    // Note: In a real system, we would map ToothCondition.condition (e.g. 'caries') to a Service.
+    // For now, we use the condition name as the description.
+    const item = await this.prisma.treatment_plan_items.create({
+      data: {
+        tenantId,
+        planId: targetPlanId,
+        toothNumber: condition.toothNumber,
+        surfaces: condition.surfaces,
+        description: `Treatment for ${condition.condition}`,
+        status: 'planned',
+        priority: 'routine',
+        quantity: 1,
+        unitPrice: 0, // Default to 0, clinician will update in Treatment Plan UI
+        taxRate: 0,
+      },
+    });
+
+    // 3. Update the tooth condition status to 'accepted' or 'planned' in the plan
+    await this.prisma.toothCondition.update({
+      where: { id: condition.id },
+      data: { status: 'planned' }, // or 'accepted'
+    });
+
+    await this.auditService.log({
+      tenantId,
+      userId,
+      action: 'tooth_condition.promote',
+      resourceType: 'treatment_plan_item',
+      resourceId: item.id,
+      metadata: { conditionId: condition.id, planId: targetPlanId },
+      result: 'success',
+    });
+
+    return item;
+  }
 
     // Soft delete: set status to 'removed' and removedAt timestamp
     await this.prisma.toothCondition.update({

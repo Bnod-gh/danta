@@ -50,9 +50,6 @@ apps/api/storage/
 temp
 .tmp
 tmp
-project.md
-todo.md
-*.md
 .kilo/kilo.jsonc
 .husky
 .kilo

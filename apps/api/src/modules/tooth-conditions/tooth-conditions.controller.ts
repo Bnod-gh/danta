@@ -35,6 +35,12 @@ export class ToothConditionsController {
     return this.toothConditionsService.update(user.tenantId, user.id, id, body);
   }
 
+  @Post(':id/promote')
+  @RequirePermissions('dental_chart:update')
+  async promote(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body('planId') planId?: string) {
+    return this.toothConditionsService.promoteToTreatmentPlan(user.tenantId, user.id, id, planId);
+  }
+
   @Delete(':id')
   @RequirePermissions('dental_chart:update')
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {

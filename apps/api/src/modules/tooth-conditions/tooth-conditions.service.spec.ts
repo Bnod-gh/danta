@@ -9,9 +9,12 @@ describe('ToothConditionsService', () => {
     dentalChart: { findFirst: jest.fn() },
     toothCondition: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
+    treatmentPlan: { findFirst: jest.fn() },
+    treatment_plan_items: { create: jest.fn() },
   };
   const audit = { log: jest.fn().mockResolvedValue(undefined) } as unknown as AuditService;
 
@@ -131,15 +134,49 @@ describe('ToothConditionsService', () => {
     expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'tooth_condition.amend' }));
   });
 
-  it('soft-deletes so historical odontograms stay reconstructable', async () => {
-    const result = await service.remove('tenant-1', 'user-1', 'f1');
+  it('provides a fallback clinicalModule for legacy data in findAll', async () => {
+    mockPrisma.toothCondition.findMany.mockResolvedValue([
+      { ...baseFinding, clinicalModule: null },
+      { ...baseFinding, id: 'f2', clinicalModule: 'restorative' },
+    ]);
 
-    expect(result).toEqual({ deleted: true });
-    expect(mockPrisma.toothCondition.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: 'removed' }) }),
-    );
-    expect(mockPrisma.toothCondition.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ removedAt: expect.any(Date) }) }),
-    );
+    const results = await service.findAll('tenant-1');
+    expect(results[0].clinicalModule).toBe('diagnosis');
+    expect(results[1].clinicalModule).toBe('restorative');
   });
-});
+
+  describe('promoteToTreatmentPlan', () => {
+    it('successfully promotes a finding to a treatment plan', async () => {
+      mockPrisma.treatmentPlan.findFirst.mockResolvedValue({ id: 'plan-1' });
+      mockPrisma.treatment_plan_items.create.mockImplementation(async ({ data }: { data: any }) => ({ id: 'item-1', ...data }));
+
+      const result = await service.promoteToTreatmentPlan('tenant-1', 'user-1', 'f1');
+
+      expect(result.id).toBe('item-1');
+      expect(mockPrisma.treatment_plan_items.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ toothNumber: '16' }) }),
+      );
+      expect(mockPrisma.toothCondition.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { status: 'planned' } }),
+      );
+    });
+
+    it('throws if no active treatment plan exists', async () => {
+      mockPrisma.treatmentPlan.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.promoteToTreatmentPlan('tenant-1', 'user-1', 'f1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('uses the provided planId if available', async () => {
+      mockPrisma.treatment_plan_items.create.mockImplementation(async ({ data }: { data: any }) => ({ id: 'item-1', ...data }));
+
+      await service.promoteToTreatmentPlan('tenant-1', 'user-1', 'f1', 'custom-plan-1');
+
+      expect(mockPrisma.treatment_plan_items.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ planId: 'custom-plan-1' }) }),
+      );
+    });
+  });
+

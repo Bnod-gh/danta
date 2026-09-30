@@ -181,7 +181,7 @@ function Glyph({ state, cx, cy }: { state: ToothState; cx: number; cy: number })
   );
 }
 
-function Tooth({
+const Tooth = React.memo(function Tooth({
   fdi,
   isMaxilla,
   layoutX,
@@ -209,6 +209,7 @@ function Tooth({
   const crownCenterY = isMaxilla ? baseY + 8 : baseY + 36;
   const glyphY = isMaxilla ? baseY + 96 : baseY - 58;
   const labelY = isMaxilla ? baseY + 124 : baseY - 78;
+
 
   const announce = state.conditions.length
     ? `Tooth ${formatLabel(fdi, numbering)}: ${state.conditions.map((c) => `${conditionConfigMap[c.condition]?.name ?? c.condition} (${c.status})`).join(", ")}`
@@ -253,20 +254,10 @@ function Tooth({
       {state.hasModule && (
         <circle cx={32} cy={glyphY} r={GLYPH_R + 5} fill="none" stroke="#0d9488" strokeWidth={1.5} opacity={0.9} />
       )}
-      <text
-        x={32}
-        y={labelY}
-        textAnchor="middle"
-        fontSize={11}
-        fontWeight={600}
-        fill={isSelected ? "#0d9488" : "#475569"}
-        style={{ pointerEvents: "none" }}
-      >
-        {formatLabel(fdi, numbering)}
-      </text>
     </g>
   );
-}
+})
+;
 
 function ArchRow({ layout, conditions, numbering, selected, onSelect, dentition, activeModuleType, onToothClick, conditionConfigMap }: {
   layout: ArchLayout;

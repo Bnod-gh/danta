@@ -22,6 +22,9 @@ import {
   toothType,
   type ToothType,
 } from '@danta/schemas';
+import { FindingFormWrapper } from './FindingFormWrapper';
+import { getFindingForm } from './FindingFormRegistry';
+
 
 const MODAL_TOOTH_VIEWBOX = 160;
 const GLYPH_R = 26;
@@ -242,63 +245,110 @@ export function ToothModal({
                 />
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Condition</Label>
-                  <Select value={conditionCode} onChange={(e) => setConditionCode(e.target.value)}>
-                    <option value="">Select condition…</option>
-                    {activeConfigs.map((cfg) => (
-                      <option key={cfg.code} value={cfg.code}>
-                        {cfg.name}
-                      </option>
-                    ))}
-                  </Select>
-                  {selectedConfig && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: selectedConfig.color }} />
-                      {selectedConfig.category}
-                      {selectedConfig.cdtCode && (
-                        <span className="font-mono">· {selectedConfig.cdtCode}</span>
+              <div className="min-w-0">
+                {moduleType ? (
+                  (() => {
+                    const formConfig = getFindingForm(moduleType);
+                    if (!formConfig) {
+                      return <p className="text-sm text-muted-foreground">No specialized form found for this module.</p>;
+                    }
+                    const FormComponent = formConfig.component;
+                    return (
+                      <FindingFormWrapper
+                        title={formConfig.displayName || 'Record Finding'}
+                        description={formConfig.description}
+                        onCancel={handleClose}
+                        onSave={async (data) => {
+                          await onSubmit({
+                            conditionCode: data.condition,
+                            surfaces: selectedSurfaces,
+                            status: mapClinicalStatusToLegacy(data.clinicalStatus || 'planned'),
+                            clinicalStatus: data.clinicalStatus || 'planned',
+                            severity: data.severity,
+                            notes: data.notes,
+                          });
+                          handleClose();
+                        }}
+                      >
+                        <FormComponent
+                          tooth={tooth}
+                          surface={selectedSurfaces[0] || null}
+                          initialData={undefined}
+                          onCancel={handleClose}
+                          onSave={async (data) => {
+                            await onSubmit({
+                              conditionCode: data.condition,
+                              surfaces: selectedSurfaces,
+                              status: mapClinicalStatusToLegacy(data.clinicalStatus || 'planned'),
+                              clinicalStatus: data.clinicalStatus || 'planned',
+                              severity: data.severity,
+                              notes: data.notes,
+                            });
+                          }}
+                        />
+                      </FindingFormWrapper>
+                    );
+                  })()
+                ) : (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Condition</Label>
+                      <Select value={conditionCode} onChange={(e) => setConditionCode(e.target.value)}>
+                        <option value="">Select condition…</option>
+                        {activeConfigs.map((cfg) => (
+                          <option key={cfg.code} value={cfg.code}>
+                            {cfg.name}
+                          </option>
+                        ))}
+                      </Select>
+                      {selectedConfig && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: selectedConfig.color }} />
+                          {selectedConfig.category}
+                          {selectedConfig.cdtCode && (
+                            <span className="font-mono">· {selectedConfig.cdtCode}</span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Clinical Status</Label>
-                    <Select value={clinicalStatus} onChange={(e) => setClinicalStatus(e.target.value as ClinicalStatus)}>
-                      {(Object.keys(CLINICAL_STATUS_LABELS) as ClinicalStatus[]).map((s) => (
-                        <option key={s} value={s}>{CLINICAL_STATUS_LABELS[s]}</option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Severity</Label>
-                    <Select value={severity} onChange={(e) => setSeverity(e.target.value as FindingSeverity | '')}>
-                      <option value="">—</option>
-                      {(Object.keys(SEVERITY_LABELS) as FindingSeverity[]).map((s) => (
-                        <option key={s} value={s}>{SEVERITY_LABELS[s]}</option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Clinical Status</Label>
+                        <Select value={clinicalStatus} onChange={(e) => setClinicalStatus(e.target.value as ClinicalStatus)}>
+                          {(Object.keys(CLINICAL_STATUS_LABELS) as ClinicalStatus[]).map((s) => (
+                            <option key={s} value={s}>{CLINICAL_STATUS_LABELS[s]}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Severity</Label>
+                        <Select value={severity} onChange={(e) => setSeverity(e.target.value as FindingSeverity | '')}>
+                          <option value="">—</option>
+                          {(Object.keys(SEVERITY_LABELS) as FindingSeverity[]).map((s) => (
+                            <option key={s} value={s}>{SEVERITY_LABELS[s]}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <Label>Notes</Label>
-                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional clinical note" />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label>Notes</Label>
+                      <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional clinical note" />
+                    </div>
 
-                {selectedSurfaces.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedSurfaces.map((s) => (
-                      <Badge key={s} variant="outline" className="gap-1">
-                        {SURFACE_LABELS[s]}
-                        <button type="button" onClick={() => toggleSurface(s)} className="hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                    {selectedSurfaces.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedSurfaces.map((s) => (
+                          <Badge key={s} variant="outline" className="gap-1">
+                            {SURFACE_LABELS[s]}
+                            <button type="button" onClick={() => toggleSurface(s)} className="hover:text-destructive">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

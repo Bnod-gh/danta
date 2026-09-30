@@ -26,7 +26,7 @@ import {
 import type { ToothSurface, FindingSeverity, ToothConditionStatus, ClinicalStatus, ToothConditionConfig, Dentition, ToothCondition } from '@danta/schemas';
 import { tenantPath } from '../../../../lib/tenant-routing';
 import { useAuth } from '../../../../lib/auth-context';
-import { getDentalCharts, createDentalChart, addToothCondition, deleteToothCondition, getToothConditions } from '../../../../lib/api/dental-charts';
+import { getDentalCharts, createDentalChart, addToothCondition, deleteToothCondition, getToothConditions, promoteToothCondition } from '../../../../lib/api/dental-charts';
 import { getToothConditionConfigs } from '../../../../lib/api/tooth-condition-configs';
 import { getTenantSchedulingResources } from '../../../../lib/api/clinical-modules';
 import {
@@ -458,7 +458,28 @@ export function PatientClinicalPage({ patientId: patientIdProp }: { patientId?: 
                           <TableCell><Badge variant={condition.status === 'planned' ? 'default' : condition.status === 'watch' ? 'secondary' : 'outline'}>{condition.status}</Badge></TableCell>
                           <TableCell>{cfg?.cdtCode ? <span className="font-mono text-xs">{cfg.cdtCode}{cfg.cdtFee != null ? ` · ${formatCurrency(cfg.cdtFee)}` : ''}</span> : '—'}</TableCell>
                           <TableCell className="max-w-40 truncate text-xs text-muted-foreground">{condition.notes ?? '—'}</TableCell>
-                          <TableCell><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteCondition(condition.id)} aria-label="Delete condition"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  promoteToothCondition(condition.id)
+                                    .then(() => {
+                                      toast.success('Added to treatment plan');
+                                      refreshChart();
+                                    })
+                                    .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to promote finding'));
+                                }}
+                                disabled={condition.status !== 'planned'}
+                                title="Promote to Treatment Plan"
+                              >
+                                Plan
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteCondition(condition.id)} aria-label="Delete condition"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       );
                     })}

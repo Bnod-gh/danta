@@ -5,8 +5,18 @@ export { Button, buttonVariants } from "./components/ui/button";
 export { Input } from "./components/ui/input";
 export { Textarea } from "./components/ui/textarea";
 export { Label } from "./components/ui/label";
-export { Select } from "./components/ui/select";
-export { Checkbox } from "./components/ui/checkbox";
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SelectScrollUpButton,
+  SelectScrollDownButton
+} from "./components/ui/select-radix";
 export { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 export { Switch } from "./components/ui/switch";
 export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent } from "./components/ui/card";
@@ -14,8 +24,7 @@ export { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupActio
 export { ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "./components/ui/chart";
 export { Toggle, toggleVariants } from "./components/ui/toggle";
 export { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group";
-export { Select as SelectRadix, SelectGroup as SelectRadixGroup, SelectValue as SelectRadixValue, SelectTrigger as SelectRadixTrigger, SelectContent as SelectRadixContent, SelectLabel as SelectRadixLabel, SelectItem as SelectRadixItem, SelectSeparator as SelectRadixSeparator, SelectScrollUpButton as SelectRadixScrollUpButton, SelectScrollDownButton as SelectRadixScrollDownButton } from "./components/ui/select-radix";
-export { Checkbox as CheckboxRadix } from "./components/ui/checkbox-radix";
+export { Checkbox } from "./components/ui/checkbox-radix";
 export { useIsMobile } from "./hooks/use-mobile";
 export { Dialog, DialogPortal, DialogOverlay, DialogClose, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "./components/ui/dialog";
 export { AlertDialog, AlertDialogPortal, AlertDialogOverlay, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "./components/ui/alert-dialog";
